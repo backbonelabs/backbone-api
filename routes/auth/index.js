@@ -1,8 +1,8 @@
 import Router from 'express';
-import verify from './verify';
+import login from './login';
 
 const router = Router();
 
-router.post('/', verify);
+router.post('/', login);
 
 export default router;
