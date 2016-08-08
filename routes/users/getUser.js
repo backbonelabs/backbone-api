@@ -7,7 +7,10 @@ export default req => {
     .findOne({ _id: dbManager.mongodb.ObjectId(id) })
     .then(user => {
       if (user) {
-        return user;
+        // Return user object without password
+        const userSansPassword = Object.assign({}, user);
+        delete userSansPassword.password;
+        return userSansPassword;
       }
       throw new Error('No user found');
     });
