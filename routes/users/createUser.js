@@ -26,9 +26,9 @@ export default req => validate(req.body, {
   password: passwordSchema,
   verifyPassword: passwordSchema,
 })
-  .catch(err => {
-    // TODO: Re-throw with a client-friendly message
-    throw err;
+  .catch(() => {
+    throw new Error('Email must be a valid email format. Password must be at least 8 characters' +
+      'and contains at least one uppercase letter, one lowercase letter, and one number.');
   })
   .then(() => {
     // Make sure password and verifyPassword are the same
