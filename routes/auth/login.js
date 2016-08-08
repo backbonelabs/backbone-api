@@ -18,7 +18,7 @@ const errorMessage = 'Email and password do not match';
  * @return {Promise} Resolves with an object that includes the email and access
  *                   token: {email, accessToken}
  */
-export default req => validate(req.body, {
+export default (req, res) => validate(req.body, {
   email: Joi.string().email().required(),
   password: Joi.string().required(),
 })
@@ -66,5 +66,12 @@ export default req => validate(req.body, {
           email: user.email,
           accessToken,
         }
-      ));
+      ))
+      .catch(err => {
+        if (err.message === errorMessage) {
+          res.status(401);
+        } else {
+          throw err;
+        }
+      });
   });
