@@ -8,7 +8,7 @@
     "lint": "eslint --quiet .",
     "prepush": "npm run lint && npm run test",
     "start": "node start",
-    "test": "echo \"Error: no test specified\" && exit 0"
+    "test": "mocha"
   },
   "dependencies": {
     "babel-plugin-transform-es2015-modules-commonjs": "6.11.5",
@@ -23,8 +23,12 @@
     "mongodb": "2.2.5"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
     "eslint": "^3.1.1",
     "eslint-config-airbnb-base": "^5.0.0",
-    "husky": "^0.11.6"
+    "husky": "^0.11.6",
+    "mocha": "^3.0.2",
+    "random-string": "^0.1.2",
+    "supertest": "^2.0.0"
   }
 }

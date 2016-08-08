@@ -15,7 +15,7 @@ app.disable('x-powered-by');
 app.use(bodyParser.json());
 
 // Initialize database connection
-dbManager.init({ url: process.env.BL_DATABASE_URL })
+export default dbManager.init({ url: process.env.BL_DATABASE_URL })
   .then(() => {
     // Register route handlers
     app.use('/auth', authRouter);
@@ -25,6 +25,7 @@ dbManager.init({ url: process.env.BL_DATABASE_URL })
     app.listen(port, () => {
       debug(`Express server listening on port ${port}`);
     });
+    return app;
   })
   .catch(err => {
     debug('Error connecting to database', err);
