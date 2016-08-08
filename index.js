@@ -14,6 +14,11 @@ app.disable('x-powered-by');
 // Parse JSON request bodies
 app.use(bodyParser.json());
 
+// Health check
+app.use('/ping', (req, res) => {
+  res.send('pong');
+});
+
 // Initialize database connection
 export default dbManager.init({ url: process.env.BL_DATABASE_URL })
   .then(() => {
