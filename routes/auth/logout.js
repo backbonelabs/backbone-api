@@ -3,8 +3,8 @@ import dbManager from '../../lib/dbManager';
 /**
  * Removes an access token from the database so that subsequent API requests
  * using the access token will not be accepted.
- * @param  {Object} req         Request
- * @param  {Object} req.headers Request headers
+ * @param  {Object} req                       Request
+ * @param  {Object} req.headers               Request headers
  * @param  {String} req.headers.authorization Authorization header with Bearer token
  * @return {Promise} Resolves with an empty object if there was a matching
  *                   access token, rejects if access token isn't a valid token

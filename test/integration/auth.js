@@ -141,4 +141,39 @@ describe('/auth', () => {
         });
     });
   });
+
+  describe('POST /logout', () => {
+    const url = '/auth/logout';
+
+    it('should require authorization header', done => {
+      request(app)
+        .post(url)
+        .expect(401)
+        .end(done);
+    });
+
+    it('should require bearer authorization scheme', done => {
+      request(app)
+        .post(url)
+        .set('Authorization', `Basic ${accessTokensToDelete[0]}`)
+        .expect(401)
+        .end(done);
+    });
+
+    it('should delete an access token', done => {
+      request(app)
+        .post(url)
+        .set('Authorization', `Bearer ${accessTokensToDelete[0]}`)
+        .expect(200)
+        .end(requestErr => {
+          db.collection('accessTokens')
+            .find({ accessToken: accessTokensToDelete[0] })
+            .limit(1)
+            .next((dbErr, accessToken) => {
+              expect(accessToken).to.be.null;
+              done(requestErr || dbErr, accessToken);
+            });
+        });
+    });
+  });
 });
