@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import Joi from 'joi';
 import validate from '../../lib/validate';
+import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 
@@ -19,8 +19,8 @@ const errorMessage = 'Email and password do not match';
  *                   token: {email, accessToken}
  */
 export default (req, res) => validate(req.body, {
-  email: Joi.string().email().required(),
-  password: Joi.string().required(),
+  email: schemas.user.email.required(),
+  password: schemas.password.required(),
 })
   .then(() => {
     const { email, password } = req.body;

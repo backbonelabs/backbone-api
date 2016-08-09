@@ -1,14 +1,7 @@
-import Joi from 'joi';
 import validate from '../../lib/validate';
+import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
-
-const passwordSchema = Joi.string().regex(/[A-Z]/, 'upper case')
-                        .regex(/[a-z]/, 'lower case')
-                        .regex(/[0-9]/, 'number')
-                        .min(8)
-                        .max(72)
-                        .required();
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -22,9 +15,9 @@ const passwordSchema = Joi.string().regex(/[A-Z]/, 'upper case')
  *                   another user
  */
 export default req => validate(req.body, {
-  email: Joi.string().email().required(),
-  password: passwordSchema,
-  verifyPassword: passwordSchema,
+  email: schemas.user.email.required(),
+  password: schemas.password.required(),
+  verifyPassword: schemas.password.required(),
 })
   .catch(() => {
     throw new Error('Email must be a valid email format. Password must be at least 8 characters' +
