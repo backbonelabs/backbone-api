@@ -19,9 +19,9 @@ const errorMessage = 'Email and password do not match';
  *                   token: {email, accessToken}
  */
 export default (req, res) => validate(req.body, {
-  email: schemas.user.email.required(),
-  password: schemas.password.required(),
-})
+  email: schemas.user.email,
+  password: schemas.password,
+}, ['email', 'password'])
   .then(() => {
     const { email, password } = req.body;
     // Check if there is a user with the email address

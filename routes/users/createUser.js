@@ -14,11 +14,10 @@ import password from '../../lib/password';
  *                   passwords do not match or the email address is being used by
  *                   another user
  */
-export default req => validate(req.body, {
-  email: schemas.user.email.required(),
-  password: schemas.password.required(),
-  verifyPassword: schemas.password.required(),
-})
+export default req => validate(req.body, Object.assign({}, schemas.user, {
+  password: schemas.password,
+  verifyPassword: schemas.password,
+}), ['email', 'password', 'verifyPassword'], ['_id'])
   .catch(() => {
     throw new Error('Email must be a valid email format. Password must be at least 8 characters' +
       'and contains at least one uppercase letter, one lowercase letter, and one number.');
