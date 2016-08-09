@@ -82,7 +82,7 @@ describe('/auth router', () => {
 
     it('should reject an invalid email/password combination', () => assertRequestStatusCode(401, {
       email: testEmail,
-      password: randomString(),
+      password: `${testPassword}1`,
     }));
 
     it('should return email and access token on valid email/password combination', done => {
