@@ -1,4 +1,5 @@
 # backbone-api
+[![CircleCI](https://circleci.com/gh/backbonelabs/backbone-api/tree/master.svg?style=shield&circle-token=286cc1fc458fb307bd3f58ee7c3380b5dfdd2914)](https://circleci.com/gh/backbonelabs/backbone-api/tree/master)
 
 API server for the Backbone app
 
