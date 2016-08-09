@@ -5,8 +5,8 @@ API server for the Backbone app
 
 ## Requirements
 
-- Node.js 6+
-- MongoDB 3.2+ (for local dev)
+- Node.js 6.3.1
+- MongoDB 3.2.8 (for local dev)
 
 ## Deploying to AWS
 
