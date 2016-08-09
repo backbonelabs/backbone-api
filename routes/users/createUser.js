@@ -2,7 +2,7 @@ import Joi from 'joi';
 import validate from '../../lib/validate';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
-
+//
 const passwordSchema = Joi.string().regex(/[A-Z]/, 'upper case')
                         .regex(/[a-z]/, 'lower case')
                         .regex(/[0-9]/, 'number')
