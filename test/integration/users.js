@@ -205,7 +205,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should update a user', done => {
+    it('should update non-password fields', done => {
       const newEmail = `aaa${userFixture.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
@@ -214,6 +214,30 @@ describe('/users router', () => {
           expect(res.body.email).to.equal(newEmail);
         })
         .end(done);
+    });
+
+    it('should update password', () => {
+      const newPassword = 'Abcdef02';
+
+      return new Promise((resolve, reject) => {
+        assertRequest({ password: newPassword, verifyPassword: newPassword })
+          .expect(200)
+          .expect(res => {
+            expect(res.body._id).to.equal(userFixture._id);
+          })
+          .end((err, res) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
+          });
+      })
+        .then(() => db.collection('users').findOne({ _id: mongodb.ObjectID(userFixture._id) }))
+        .then(user => bcrypt.compareSync(newPassword, user.password))
+        .then(isPasswordMatches => {
+          expect(isPasswordMatches).to.be.true;
+        });
     });
   });
 });

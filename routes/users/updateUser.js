@@ -30,7 +30,11 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       }
 
       // Hash password
-      body.password = password.hash(pw);
+      return password.hash(pw)
+        .then(hash => {
+          body.password = hash;
+          return body;
+        });
     }
 
     return body;
