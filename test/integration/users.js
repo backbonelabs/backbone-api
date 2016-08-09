@@ -7,11 +7,12 @@ import server from '../../index';
 
 let app;
 let db;
-let userFixture;
+let userFixture = {};
 
 const testEmail = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
+const testAccessToken = 'testAccessToken';
 const userIdsToDelete = [];
 
 before(() => Promise.resolve(server)
@@ -22,24 +23,25 @@ before(() => Promise.resolve(server)
   .then(mDb => {
     db = mDb;
   })
-  .then(() => db.collection('users')
-    .insertOne({
-      email: testEmail,
-      password: testPasswordHash,
-    })
-  )
+  .then(() => db.collection('users').insertOne({
+    email: testEmail,
+    password: testPasswordHash,
+  }))
   .then(results => {
     userFixture = results.ops[0];
+    userFixture._id = userFixture._id.toHexString();
     userIdsToDelete.push(userFixture._id);
   })
+  .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
 );
 
-after(() => db.collection('users')
-  .deleteMany({
+after(() => db.collection('accessTokens')
+  .deleteOne({ accessToken: testAccessToken })
+  .then(() => db.collection('users').deleteMany({
     _id: {
       $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
     },
-  })
+  }))
 );
 
 describe('/users router', () => {
@@ -137,6 +139,81 @@ describe('/users router', () => {
           userIdsToDelete.push(res.body.id);
           done(err, res);
         });
+    });
+  });
+
+  describe('POST /:id', () => {
+    let url;
+
+    const assertRequest = (body) => request(app)
+      .post(url)
+      .set('Authorization', `Bearer ${testAccessToken}`)
+      .send(body);
+
+    before(() => {
+      url = `/users/${userFixture._id}`;
+    });
+
+    it('should respond with 401 on missing authorization credentials', done => {
+      request(app)
+        .post(url)
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with 401 on invalid access token', done => {
+      request(app)
+        .post(url)
+        .set('Authorization', 'Bearer 123')
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should not allow unknown fields', done => {
+      assertRequest({ foo: 'bar' })
+        .expect(400)
+        .expect({ error: '"foo" is not allowed' })
+        .end(done);
+    });
+
+    it('should not allow forbidden fields', done => {
+      assertRequest({ _id: 'abc123' })
+        .expect(400)
+        .expect({ error: 'child "_id" fails because ["_id" is not allowed]' })
+        .end(done);
+    });
+
+    it('should not allow mismatching password fields', done => {
+      assertRequest({
+        password: testPassword,
+        verifyPassword: `${testPassword}1`,
+      })
+        .expect(400)
+        .expect({ error: 'Passwords must match' })
+        .end(done);
+    });
+
+    it('should not update or create users for an invalid id', done => {
+      request(app)
+        .post('/users/123456789012')
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .send({ email: 'new@email.com' })
+        .expect(400)
+        .expect({ error: 'Invalid user' })
+        .end(done);
+    });
+
+    it('should update a user', done => {
+      const newEmail = `aaa${userFixture.email}`;
+      assertRequest({ email: newEmail })
+        .expect(200)
+        .expect(res => {
+          expect(res.body._id).to.equal(userFixture._id);
+          expect(res.body.email).to.equal(newEmail);
+        })
+        .end(done);
     });
   });
 });
