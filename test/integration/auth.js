@@ -26,7 +26,6 @@ before(() => Promise.resolve(server)
     .insertOne({
       email: testEmail,
       password: testPasswordHash,
-      createdAt: new Date(),
     })
   )
   .then(results => {
@@ -41,70 +40,50 @@ after(() => db.collection('accessTokens')
   )
 );
 
-describe('/auth', () => {
+describe('/auth router', () => {
   describe('POST /login', () => {
     const url = '/auth/login';
-
-    it('should reject when email is not in request body', done => {
+    const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
       request(app)
         .post(url)
-        .send({ password: testPassword })
-        .expect(400)
-        .end(done);
+        .send(body)
+        .expect(statusCode)
+        .end((err, res) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        });
     });
 
-    it('should reject when password is not in request body', done => {
-      request(app)
-        .post(url)
-        .send({ email: testEmail })
-        .expect(400)
-        .end(done);
-    });
+    it('should reject when email is not in request body', () => assertRequestStatusCode(400, {
+      password: testPassword,
+    }));
+
+    it('should reject when password is not in request body', () => assertRequestStatusCode(400, {
+      email: testEmail,
+    }));
 
     it('should reject invalid email formats', () => {
+      const password = { password: testPassword };
       const simpleWord = 'email';
       const noAtSymbol = 'bb.com';
       const noLocal = '@b.com';
       const noDomain = 'b@';
 
-      const makeRequestWithEmail = email => new Promise((resolve, reject) => {
-        request(app)
-          .post(url)
-          .send({
-            email,
-            password: testPassword,
-          })
-          .expect(400)
-          .end((err, res) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(res);
-            }
-          });
-      });
-
       return Promise.all([
-        makeRequestWithEmail(simpleWord),
-        makeRequestWithEmail(noAtSymbol),
-        makeRequestWithEmail(noLocal),
-        makeRequestWithEmail(noDomain),
+        assertRequestStatusCode(400, Object.assign({ email: simpleWord }, password)),
+        assertRequestStatusCode(400, Object.assign({ email: noAtSymbol }, password)),
+        assertRequestStatusCode(400, Object.assign({ email: noLocal }, password)),
+        assertRequestStatusCode(400, Object.assign({ email: noDomain }, password)),
       ]);
     });
 
-    it('should reject an invalid email/password combination', done => {
-      const email = testEmail;
-      const password = randomString();
-
-      request(app)
-        .post(url)
-        .send({
-          email,
-          password,
-        })
-        .expect(401)
-        .end(done);
-    });
+    it('should reject an invalid email/password combination', () => assertRequestStatusCode(401, {
+      email: testEmail,
+      password: randomString(),
+    }));
 
     it('should return email and access token on valid email/password combination', done => {
       request(app)
