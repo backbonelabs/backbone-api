@@ -78,8 +78,7 @@ export default (req, res) => validate(req.body, {
       .catch(err => {
         if (err.message === errorMessage) {
           res.status(401);
-        } else {
-          throw err;
         }
+        throw err;
       });
   });
