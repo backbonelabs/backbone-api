@@ -8,6 +8,7 @@ import server from '../../index';
 let app;
 let db;
 let userFixture;
+let accessTokenFixture;
 
 const testEmail = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
@@ -30,6 +31,16 @@ before(() => Promise.resolve(server)
   )
   .then(results => {
     userFixture = results.ops[0];
+  })
+  .then(() => db.collection('accessTokens')
+    .insertOne({
+      userId: mongodb.ObjectID(userFixture._id),
+      accessToken: randomString({ length: 64 }),
+    })
+  )
+  .then(results => {
+    accessTokenFixture = results.ops[0];
+    accessTokensToDelete.push(accessTokenFixture.accessToken);
   })
 );
 
@@ -134,7 +145,7 @@ describe('/auth router', () => {
     it('should require bearer authorization scheme', done => {
       request(app)
         .post(url)
-        .set('Authorization', `Basic ${accessTokensToDelete[0]}`)
+        .set('Authorization', `Basic ${accessTokensToDelete[1]}`)
         .expect(401)
         .end(done);
     });
@@ -142,17 +153,42 @@ describe('/auth router', () => {
     it('should delete an access token', done => {
       request(app)
         .post(url)
-        .set('Authorization', `Bearer ${accessTokensToDelete[0]}`)
+        .set('Authorization', `Bearer ${accessTokensToDelete[1]}`)
         .expect(200)
         .end(requestErr => {
           db.collection('accessTokens')
-            .find({ accessToken: accessTokensToDelete[0] })
+            .find({ accessToken: accessTokensToDelete[1] })
             .limit(1)
             .next((dbErr, accessToken) => {
               expect(accessToken).to.be.null;
               done(requestErr || dbErr, accessToken);
             });
         });
+    });
+  });
+
+  describe('POST /verify', () => {
+    const url = '/auth/verify';
+
+    it('should reject an invalid access token format', done => {
+      request(app)
+        .post(url)
+        .send({ accessToken: 'foo' })
+        .expect(400, done);
+    });
+
+    it('should return 200 for a valid access token', done => {
+      request(app)
+        .post(url)
+        .send({ accessToken: accessTokenFixture.accessToken })
+        .expect(200, done);
+    });
+
+    it('should return 401 for an invalid access token', done => {
+      request(app)
+        .post(url)
+        .send({ accessToken: randomString({ length: 64 }) })
+        .expect(401, done);
     });
   });
 });
