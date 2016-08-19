@@ -1,9 +1,11 @@
 import crypto from 'crypto';
+import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 
+const debug = Debug('routes:auth:login');
 const errorMessage = 'Email and password do not match';
 
 /**
@@ -32,8 +34,10 @@ export default (req, res) => validate(req.body, {
       .next()
       .then(user => {
         if (user) {
+          debug('Found user by email', email);
           return user;
         }
+        debug('Did not find user by email', email);
         throw new Error(errorMessage);
       })
       .then(user => (
@@ -47,6 +51,7 @@ export default (req, res) => validate(req.body, {
           const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
           hmac.update(`${userId}:${Date.now()}`);
           const accessToken = hmac.digest('hex');
+          debug('User auth success, generated access token', accessToken);
 
           // Something to consider: this will not inactivate previous access tokens for
           // the user on each login. Do we want to inactivate old access tokens after every
@@ -60,6 +65,7 @@ export default (req, res) => validate(req.body, {
             .insertOne({ userId, accessToken })
             .then(() => [user, accessToken]);
         }
+        debug('User auth failed');
         throw new Error(errorMessage);
       })
       .then(([user, accessToken]) => (
@@ -72,8 +78,7 @@ export default (req, res) => validate(req.body, {
       .catch(err => {
         if (err.message === errorMessage) {
           res.status(401);
-        } else {
-          throw err;
         }
+        throw err;
       });
   });
