@@ -7,6 +7,7 @@ module.exports = {
   },
   rules: {
     'new-cap': 0,
-    'no-underscore-dangle': 0
+    'no-underscore-dangle': 0,
+    'prefer-template': 0,
   }
 };
