@@ -1,3 +1,4 @@
+import uaParser from 'ua-parser-js';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -13,7 +14,7 @@ import dbManager from '../../lib/dbManager';
  *                   passwords do not match or the email address is being used by
  *                   another user
  */
-export default req => validate(req.query, Object.assign({}, { e: schemas.user.email },
+export default (req, res) => validate(req.query, Object.assign({}, { e: schemas.user.email },
   { t: schemas.emailToken }), ['e', 't'], [], {})
   .then(() => {
     const { e: email, t: emailToken } = req.query;
@@ -23,16 +24,29 @@ export default req => validate(req.query, Object.assign({}, { e: schemas.user.em
   })
   .then(token => {
     const { e: email } = req.query;
-
     if (token) {
+      // Delete token, since it was verified
       return dbManager.getDb()
-      .collection('users')
-      .findOneAndUpdate(
-        { email },
-        { $set: { confirmed: true } }
-      );
+        .collection('emailTokens')
+        .remove({ email })
+        .then(() => (
+          // Update user to be confirmed
+          dbManager.getDb()
+          .collection('users')
+          .findOneAndUpdate(
+            { email },
+            { $set: { confirmed: true } }
+          )
+        ));
     }
     throw new Error('Error with email confirmation');
   })
-  .then(() => ('Email is now confirmed'))
+  .then(() => {
+    // Check user agent, if iOS device, open app
+    const useragent = uaParser(req.headers['user-agent']);
+    if (useragent.os.name === 'iOS') {
+      res.redirect('openBackbone://');
+    }
+    return 'Email is now confirmed';
+  })
   .catch(err => { throw err; });
