@@ -23,8 +23,8 @@ export default (req, res) => validate(req.query, Object.assign({}, { e: schemas.
     .findOne({ email, emailToken });
   })
   .then(token => {
-    const { e: email } = req.query;
     if (token) {
+      const { e: email } = req.query;
       // Delete token, since it was verified
       return dbManager.getDb()
         .collection('emailTokens')

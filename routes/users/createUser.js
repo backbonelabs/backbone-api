@@ -6,12 +6,13 @@ import emailUtility from '../../lib/emailUtility';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
+ * Sends a confirmation email after creating a new user account
  * @param  {Object} req                     Request
  * @param  {Object} req.body                Request body
  * @param  {String} req.body.email          Email
  * @param  {String} req.body.password       Password
  * @param  {String} req.body.verifyPassword Password
- * @return {Promise} Resolves with an object containing the user ID, rejects if both
+ * @return {Promise} Resolves with an object containing the emailToken, rejects if both
  *                   passwords do not match or the email address is being used by
  *                   another user
  */
