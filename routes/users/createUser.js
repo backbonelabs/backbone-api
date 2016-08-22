@@ -12,9 +12,9 @@ import emailUtility from '../../lib/emailUtility';
  * @param  {String} req.body.email          Email
  * @param  {String} req.body.password       Password
  * @param  {String} req.body.verifyPassword Password
- * @return {Promise} Resolves with an object containing the emailToken, rejects if both
- *                   passwords do not match or the email address is being used by
- *                   another user
+ * @return {Promise} Resolves with an object containing the user email, rejects if
+ *                   both passwords do not match or the email address is being used
+ *                   by another user
  */
 export default req => validate(req.body, Object.assign({}, schemas.user, {
   password: schemas.password,
@@ -54,15 +54,8 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           confirmed: false,
         })
         // Send confirmation email
-        .then(() => emailUtility.send(req.body.email))
-        .then(result => (
-          // Store user email and token for verification
-          dbManager.getDb()
-          .collection('emailTokens')
-          .insertOne(result)
-          .then(() => (result.emailToken))
-        ))
+        .then(() => emailUtility.sendConfirmation(req.body.email))
       ))
   ))
-  .then(emailToken => ({ emailToken }))
+  .then(email => ({ email }))
   .catch(err => { throw err; });
