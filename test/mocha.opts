@@ -1,3 +1,4 @@
 --require babel-register
 --require localenv
+--timeout 5000
 ./test/integration
