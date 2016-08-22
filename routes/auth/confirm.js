@@ -8,11 +8,9 @@ import dbManager from '../../lib/dbManager';
  * Checks if a confirmation URL's email/token parameters match any email/token in database
  * @param  {Object} req                     Request
  * @param  {Object} req.query               Request query keys and their values
- * @param  {String} req.query.e             Email
- * @param  {String} req.query.t             Email token
- * @return {Promise} Resolves with an object containing the user ID, rejects if both
- *                   passwords do not match or the email address is being used by
- *                   another user
+ * @param  {String} req.query.email         Email
+ * @return {Promise} Resolves with a string stating that the user has successfully
+ *                   confirmed their email
  */
 export default (req, res) => validate(req.query, Object.assign({}, { email: schemas.user.email }),
   ['email'], [], {})
@@ -24,14 +22,13 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
   .then(user => {
     if (!user) {
       res.status(401);
-    } else {
-      dbManager.getDb()
-      .collection('users')
-      .findOneAndUpdate(
-        { email: req.query.email },
-        { $set: { confirmed: true } }
-      );
     }
+    return dbManager.getDb()
+    .collection('users')
+    .findOneAndUpdate(
+      { email: req.query.email },
+      { $set: { confirmed: true } }
+    );
   })
   .then(() => {
     const useragent = uaParser(req.headers['user-agent']);
