@@ -14,7 +14,7 @@ import dbManager from '../../lib/dbManager';
  *                   passwords do not match or the email address is being used by
  *                   another user
  */
-export default (req, res) => validate(req.query, Object.assign({}, { e: schemas.user.email }),
+export default (req, res) => validate(req.query, Object.assign({}, { email: schemas.user.email }),
   ['email'], [], {})
   .then(() => (
     dbManager.getDb()
@@ -22,15 +22,15 @@ export default (req, res) => validate(req.query, Object.assign({}, { e: schemas.
     .findOne({ email: req.query.email })
   ))
   .then(user => {
-    if (user) {
+    if (!user) {
+      res.status(401);
+    } else {
       dbManager.getDb()
       .collection('users')
       .findOneAndUpdate(
         { email: req.query.email },
         { $set: { confirmed: true } }
       );
-    } else {
-      throw new Error('Error with email confirmation');
     }
   })
   .then(() => {
@@ -39,6 +39,6 @@ export default (req, res) => validate(req.query, Object.assign({}, { e: schemas.
       // Check if user agent is iOS and redirect to app URL
       res.redirect('openBackbone://');
     }
-    return 'Email is now confirmed';
+    return 'Email successfully confirmed';
   })
   .catch(err => { throw err; });

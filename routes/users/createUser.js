@@ -54,8 +54,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           confirmed: false,
         })
         // Send confirmation email
-        .then(() => emailUtility.sendConfirmation(req.body.email))
       ))
   ))
-  .then(email => ({ email }))
+  .then(() => emailUtility.sendConfirmation(req.body.email))
   .catch(err => { throw err; });
