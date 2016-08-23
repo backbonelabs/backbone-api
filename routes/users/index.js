@@ -11,6 +11,6 @@ const router = Router();
 router.post('/', handleRoute(createUser));
 router.get('/:id', requireAuth, handleRoute(getUser));
 router.post('/:id', requireAuth, handleRoute(updateUser));
-router.get('/confirmed/:email', handleRoute(getUserConfirmed));
+router.get('/confirm/:email', handleRoute(getUserConfirmed));
 
 export default router;

@@ -51,11 +51,10 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         .insertOne({
           email: req.body.email,
           password: hash,
-          confirmed: false,
+          isConfirmed: false,
         })
-        .then(result => emailUtility.sendConfirmation(req.body.email, result.insertedId))
         // Send confirmation email
       ))
   ))
-  .then(id => ({ id }))
+  .then(() => emailUtility.sendConfirmation(req.body.email))
   .catch(err => { throw err; });
