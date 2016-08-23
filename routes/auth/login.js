@@ -33,11 +33,9 @@ export default (req, res) => validate(req.body, {
       .limit(1)
       .next()
       .then(user => {
-        if (user && user.isConfirmed) {
+        if (user) {
           debug('Found user by email', email);
           return user;
-        } else if (user && !user.isConfirmed) {
-          throw new Error('This email is not confirmed');
         }
         debug('Did not find user by email', email);
         throw new Error(errorMessage);
@@ -47,7 +45,9 @@ export default (req, res) => validate(req.body, {
         Promise.all([user, passwordUtil.verify(password, user.password)])
       ))
       .then(([user, isPasswordMatch]) => {
-        if (isPasswordMatch) {
+        if (isPasswordMatch && !user.isConfirmed) {
+          throw new Error('This email is not confirmed');
+        } else if (isPasswordMatch && user.isConfirmed) {
           // Generate an access token
           const { _id: userId } = user;
           const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
