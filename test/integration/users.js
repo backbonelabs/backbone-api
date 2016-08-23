@@ -123,25 +123,24 @@ describe('/users router', () => {
       verifyPassword: testPassword,
     }));
 
-  // TODO: Take into account sending email operation
-  //   it('should create a new user', done => {
-  //     request(app)
-  //       .post(url)
-  //       .send({
-  //         email: `test.${randomString()}@${randomString()}.com`,
-  //         password: testPassword,
-  //         verifyPassword: testPassword,
-  //       })
-  //       .expect(200)
-  //       .expect(res => {
-  //         expect(res.body).to.be.ok;
-  //       })
-  //       .end((err, res) => {
-  //         userIdsToDelete.push(res.body.id);
-  //         done(err, res);
-  //       });
-  //   });
-  // });
+    it('should create a new user', done => {
+      request(app)
+        .post(url)
+        .send({
+          email: `test.${randomString()}@${randomString()}.com`,
+          password: testPassword,
+          verifyPassword: testPassword,
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.be.ok;
+        })
+        .end((err, res) => {
+          userIdsToDelete.push(res.body.id);
+          done(err, res);
+        });
+    });
+  });
 
   describe('POST /:id', () => {
     let url;
