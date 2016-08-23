@@ -13,7 +13,7 @@ import dbManager from '../../lib/dbManager';
  *                   confirmed their email
  */
 export default (req, res) => validate(req.query, Object.assign({}, { email: schemas.user.email }),
-  ['email'], [], {})
+  ['email'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
