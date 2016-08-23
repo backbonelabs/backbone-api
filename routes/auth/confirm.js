@@ -20,21 +20,29 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
     .findOne({ email: req.query.email })
   ))
   .then(user => {
-    if (!user) {
-      res.status(401);
+    if (user) {
+      res.status(400);
+
+      /**
+       * TODO: Create an error message that tells
+       * to sign up again. Likely token expired
+       * and we deleted their account.
+       */
+      throw new Error('Could not confirm email');
+    } else {
+      return dbManager.getDb()
+      .collection('users')
+      .findOneAndUpdate(
+        { email: req.query.email },
+        { $set: { confirmed: true } }
+      );
     }
-    return dbManager.getDb()
-    .collection('users')
-    .findOneAndUpdate(
-      { email: req.query.email },
-      { $set: { confirmed: true } }
-    );
   })
   .then(() => {
     const useragent = uaParser(req.headers['user-agent']);
     if (useragent.os.name === 'iOS') {
       // Check if user agent is iOS and redirect to app URL
-      res.redirect('openBackbone://');
+      res.redirect('backbone://');
     }
     return 'Email successfully confirmed';
   })
