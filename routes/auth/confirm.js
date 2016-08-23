@@ -20,7 +20,7 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
     .findOne({ email: req.query.email })
   ))
   .then(user => {
-    if (user) {
+    if (!user) {
       res.status(400);
 
       /**
@@ -34,7 +34,7 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
       .collection('users')
       .findOneAndUpdate(
         { email: req.query.email },
-        { $set: { confirmed: true } }
+        { $set: { isConfirmed: true } }
       );
     }
   })
