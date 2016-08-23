@@ -96,12 +96,13 @@ describe('/auth router', () => {
       password: `${testPassword}1`,
     }));
 
-    it('should return email and access token on valid email/password combination', done => {
+    it('should return email and access token on confirmed email/password combination', done => {
       request(app)
         .post(url)
         .send({
           email: userFixture.email,
           password: testPassword,
+          isConfirmed: true,
         })
         .expect(200)
         .expect(res => {
@@ -114,12 +115,13 @@ describe('/auth router', () => {
         });
     });
 
-    it('should return a 64-character access token on valid email/password combination', done => {
+    it('should return a 64-char access token on confirmed email/password combination', done => {
       request(app)
         .post(url)
         .send({
           email: userFixture.email,
           password: testPassword,
+          isConfirmed: true,
         })
         .expect(200)
         .expect(res => {
@@ -127,6 +129,24 @@ describe('/auth router', () => {
         })
         .end((err, res) => {
           accessTokensToDelete.push(res.body.accessToken);
+          done(err, res);
+        });
+    });
+
+    it('should reject on unconfirmed email/password combination', done => {
+      request(app)
+        .post(url)
+        .send({
+          email: userFixture.email,
+          password: testPassword,
+          isConfirmed: false,
+        })
+        .expect(401)
+        .expect(res => {
+          expect(res.body).to.contain.all.keys(['email', 'isConfirmed']);
+          expect(res.body.email).to.equal(userFixture.email);
+        })
+        .end((err, res) => {
           done(err, res);
         });
     });
