@@ -133,7 +133,7 @@ describe('/users router', () => {
         })
         .expect(200)
         .expect(res => {
-          expect(res.body).to.have.all.keys('id');
+          expect(res.body).to.be.ok;
         })
         .end((err, res) => {
           userIdsToDelete.push(res.body.id);
