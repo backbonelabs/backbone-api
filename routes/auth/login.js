@@ -6,7 +6,7 @@ import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 
 const debug = Debug('routes:auth:login');
-const errorMessage = 'Email and password do not match';
+const errorMessage = 'Invalid email/password. Please try again.';
 
 /**
  * Verifies a user account by checking the email and password and returns an
@@ -33,9 +33,11 @@ export default (req, res) => validate(req.body, {
       .limit(1)
       .next()
       .then(user => {
-        if (user) {
+        if (user && user.isConfirmed) {
           debug('Found user by email', email);
           return user;
+        } else if (user && !user.isConfirmed) {
+          throw new Error('This email is not confirmed');
         }
         debug('Did not find user by email', email);
         throw new Error(errorMessage);
