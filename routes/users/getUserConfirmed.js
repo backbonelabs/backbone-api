@@ -6,9 +6,9 @@ export default (req, res) => {
     .collection('users')
     .findOne({ email })
     .then(user => {
-      if (user && !user.confirmed) {
+      if (user && !user.isConfirmed) {
         res.status(401);
       }
-      return user.confirmed;
+      return user.isConfirmed;
     });
 };
