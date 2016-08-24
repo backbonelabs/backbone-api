@@ -46,24 +46,19 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     })
     .then(hash => (
       // Create user
-      dbManager.getDb()
-      .collection('users')
-      .insertOne({
-        email: req.body.email,
-        password: hash,
-        isConfirmed: false,
+      emailUtility.generateEmailToken()
+      .then((token) => {
+        dbManager.getDb()
+        .collection('users')
+        .insertOne({
+          confirmationToken: token,
+          confirmationExpiry: Date.now() + 172800000,
+          email: req.body.email,
+          password: hash,
+          isConfirmed: false,
+        })
+        .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
       })
     ))
-    .then(() => emailUtility.generateEmailToken())
-    .then(token => {
-      dbManager.getDb()
-      .collection('emailTokens')
-      .insertOne({
-        token,
-        email: req.body.email,
-        tokenExpiry: Date.now() + 172800000,
-      })
-      .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
-    })
   ))
   .then(() => (true));
