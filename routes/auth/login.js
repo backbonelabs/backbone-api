@@ -6,7 +6,8 @@ import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 
 const debug = Debug('routes:auth:login');
-const errorMessage = 'Email and password do not match';
+const errorMessage = 'Invalid email/password. Please try again.';
+const notConfirmedMessage = 'Email is not confirmed. Please check your inbox.';
 
 /**
  * Verifies a user account by checking the email and password and returns an
@@ -45,7 +46,9 @@ export default (req, res) => validate(req.body, {
         Promise.all([user, passwordUtil.verify(password, user.password)])
       ))
       .then(([user, isPasswordMatch]) => {
-        if (isPasswordMatch) {
+        if (isPasswordMatch && !user.isConfirmed) {
+          throw new Error('Email is not confirmed. Please check your inbox.');
+        } else if (isPasswordMatch && user.isConfirmed) {
           // Generate an access token
           const { _id: userId } = user;
           const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
@@ -76,7 +79,7 @@ export default (req, res) => validate(req.body, {
         }
       ))
       .catch(err => {
-        if (err.message === errorMessage) {
+        if (err.message === errorMessage || err.message === notConfirmedMessage) {
           res.status(401);
         }
         throw err;

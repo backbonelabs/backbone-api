@@ -22,7 +22,9 @@
     "joi": "9.0.4",
     "localenv": "0.2.2",
     "lodash": "4.14.2",
-    "mongodb": "2.2.5"
+    "mongodb": "2.2.5",
+    "nodemailer": "2.5.0",
+    "ua-parser-js": "0.7.10"
   },
   "devDependencies": {
     "chai": "^3.5.0",
