@@ -33,28 +33,37 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
   .then(() => (
     // Check if there is already a user with the email
     dbManager.getDb()
+    .collection('users')
+    .findOne({ email: req.body.email })
+    .then(user => {
+      if (user) {
+        // Email is already associated to a confirmed user
+        throw new Error('Email is not available');
+      } else {
+        // Email is not associated to any existing users, hash password
+        return password.hash(req.body.password);
+      }
+    })
+    .then(hash => (
+      // Create user
+      dbManager.getDb()
       .collection('users')
-      .findOne({ email: req.body.email })
-      .then(user => {
-        if (user) {
-          // Email is already associated to a confirmed user
-          throw new Error('Email is not available');
-        } else {
-          // Email is not associated to any existing users, hash password
-          return password.hash(req.body.password);
-        }
+      .insertOne({
+        email: req.body.email,
+        password: hash,
+        isConfirmed: false,
       })
-      .then(hash => (
-        // Create user
-        dbManager.getDb()
-        .collection('users')
-        .insertOne({
-          email: req.body.email,
-          password: hash,
-          isConfirmed: false,
-        })
-        // Send confirmation email
-      ))
+    ))
+    .then(() => emailUtility.generateEmailToken())
+    .then(token => {
+      dbManager.getDb()
+      .collection('emailTokens')
+      .insertOne({
+        token,
+        email: req.body.email,
+        tokenExpiry: Date.now() + 172800000,
+      })
+      .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
+    })
   ))
-  .then(() => emailUtility.sendConfirmation(req.body.email))
   .then(() => (true));

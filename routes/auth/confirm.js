@@ -12,15 +12,18 @@ import dbManager from '../../lib/dbManager';
  * @return {Promise} Resolves with a string stating that the user has successfully
  *                   confirmed their email
  */
-export default (req, res) => validate(req.query, Object.assign({}, { email: schemas.user.email }),
-  ['email'])
+export default (req, res) => validate(req.query, Object.assign({}, { token: schemas.emailToken }),
+  ['token'])
   .then(() => (
     dbManager.getDb()
-    .collection('users')
-    .findOne({ email: req.query.email })
+    .collection('emailTokens')
+    .findOne({
+      token: req.query.token,
+      tokenExpiry: { $gt: Date.now() },
+    })
   ))
-  .then(user => {
-    if (!user) {
+  .then(token => {
+    if (!token) {
       res.status(400);
 
       /**
@@ -33,9 +36,14 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
       return dbManager.getDb()
       .collection('users')
       .findOneAndUpdate(
-        { email: req.query.email },
+        { email: token.email },
         { $set: { isConfirmed: true } }
-      );
+      )
+      .then(() => {
+        dbManager.getDb()
+        .collection('emailTokens')
+        .deleteOne({ _id: token._id });
+      });
     }
   })
   .then(() => {
