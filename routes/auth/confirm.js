@@ -3,7 +3,6 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 
-
 /**
  * Checks if a confirmation URL's email/token parameters match any email/token in database
  * @param  {Object} req                     Request
@@ -20,19 +19,17 @@ export default (req, res) => validate(req.query, Object.assign({},
     .collection('users')
     .findOne({
       confirmationToken: req.query.token,
-      confirmationExpiry: { $gt: Date.now() },
     })
   ))
   .then(user => {
+    // Create a date object and set to two days ago
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
     if (!user) {
       res.status(400);
-
-      /**
-       * TODO: Create an error message that tells
-       * to sign up again. Likely token expired
-       * and we deleted their account.
-       */
-      throw new Error('Could not confirm email');
+    } else if (user.createdAt < twoDaysAgo) {
+      throw new Error('Confirmation is expired');
     } else {
       return dbManager.getDb()
       .collection('users')
@@ -50,5 +47,4 @@ export default (req, res) => validate(req.query, Object.assign({},
     } else {
       return 'Email successfully confirmed';
     }
-  })
-  .catch(err => { throw err; });
+  });

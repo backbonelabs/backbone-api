@@ -44,21 +44,21 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         return password.hash(req.body.password);
       }
     })
-    .then(hash => (
-      // Create user
+    .then(hash => {
+      // Generate a token and create user
       emailUtility.generateConfirmationToken()
       .then((token) => {
         dbManager.getDb()
         .collection('users')
         .insertOne({
-          confirmationToken: token,
-          confirmationExpiry: Date.now() + 172800000,
           email: req.body.email,
           password: hash,
           isConfirmed: false,
+          createdAt: new Date(),
+          confirmationToken: token,
         })
         .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
-      })
-    ))
+      });
+    })
   ))
   .then(() => (true));
