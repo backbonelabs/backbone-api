@@ -25,6 +25,10 @@ export default (req, res) => validate(req.body, {
   email: schemas.user.email,
   password: schemas.password,
 }, ['email', 'password'])
+  .catch(() => {
+    throw new Error('Email must be a valid email format. Password must be at least 8 characters ' +
+      'and contain at least one number.');
+  })
   .then(() => {
     const { email, password } = req.body;
     // Check if there is a user with the email address
