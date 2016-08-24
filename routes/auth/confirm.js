@@ -23,8 +23,8 @@ export default (req, res) => validate(req.query, Object.assign({},
       confirmationExpiry: { $gt: Date.now() },
     })
   ))
-  .then(token => {
-    if (!token) {
+  .then(user => {
+    if (!user) {
       res.status(400);
 
       /**
@@ -37,7 +37,7 @@ export default (req, res) => validate(req.query, Object.assign({},
       return dbManager.getDb()
       .collection('users')
       .findOneAndUpdate(
-        { _id: token._id },
+        { _id: user._id },
         { $set: { isConfirmed: true } }
       );
     }
