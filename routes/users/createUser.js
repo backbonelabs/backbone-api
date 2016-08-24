@@ -46,7 +46,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     })
     .then(hash => (
       // Create user
-      emailUtility.generateEmailToken()
+      emailUtility.generateConfirmationToken()
       .then((token) => {
         dbManager.getDb()
         .collection('users')
