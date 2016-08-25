@@ -1,9 +1,9 @@
-import crypto from 'crypto';
 import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
+import tokenFactory from '../../lib/tokenFactory';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid email/password. Please try again.';
@@ -51,10 +51,14 @@ export default (req, res) => validate(req.body, {
         } else if (isPasswordMatch && user.isConfirmed) {
           // Generate an access token
           const { _id: userId } = user;
-          const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
-          hmac.update(`${userId}:${Date.now()}`);
-          const accessToken = hmac.digest('hex');
-          debug('User auth success, generated access token', accessToken);
+          return tokenFactory.createAccessToken(userId)
+          .then((accessToken) => {
+            debug('User auth success, generated access token', accessToken);
+            return dbManager.getDb()
+              .collection('accessTokens')
+              .insertOne({ userId, accessToken })
+              .then(() => [user, accessToken]);
+          });
 
           // Something to consider: this will not inactivate previous access tokens for
           // the user on each login. Do we want to inactivate old access tokens after every
@@ -63,10 +67,6 @@ export default (req, res) => validate(req.body, {
 
           // Store access token with the user in the database
           // TODO: If this creates a bottleneck, we should store valid access tokens in Redis
-          return dbManager.getDb()
-            .collection('accessTokens')
-            .insertOne({ userId, accessToken })
-            .then(() => [user, accessToken]);
         }
         debug('User auth failed');
         throw new Error(errorMessage);
