@@ -17,7 +17,7 @@ export default req => {
         confirmationTokenExpiry,
       },
     })
-    .then(() => emailUtility.sendEmailConfirmation(email, token))
+    .then(() => emailUtility.sendConfirmationEmail(email, token))
   ))
   .then(() => true);
 };
