@@ -49,8 +49,8 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       const confirmationTokenExpiry = new Date();
       confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
 
-      emailUtility.generateConfirmationToken()
-      .then((token) => {
+      return emailUtility.generateConfirmationToken()
+      .then((token) => (
         dbManager.getDb()
         .collection('users')
         .insertOne({
@@ -61,8 +61,8 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           confirmationToken: token,
           confirmationTokenExpiry,
         })
-        .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
-      });
+        .then(() => emailUtility.sendConfirmationEmail(req.body.email, token))
+      ));
     })
   ))
   .then(() => (true));
