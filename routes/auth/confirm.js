@@ -3,7 +3,6 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 
-
 /**
  * Checks if a confirmation URL's email/token parameters match any email/token in database
  * @param  {Object} req                     Request
@@ -12,28 +11,27 @@ import dbManager from '../../lib/dbManager';
  * @return {Promise} Resolves with a string stating that the user has successfully
  *                   confirmed their email
  */
-export default (req, res) => validate(req.query, Object.assign({}, { email: schemas.user.email }),
-  ['email'])
+export default (req, res) => validate(req.query, Object.assign({},
+  { token: schemas.confirmationToken }),
+  ['token'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
-    .findOne({ email: req.query.email })
+    .findOne({
+      confirmationToken: req.query.token,
+    })
   ))
   .then(user => {
+    // Create a date object and set to two days ago
     if (!user) {
       res.status(400);
-
-      /**
-       * TODO: Create an error message that tells
-       * to sign up again. Likely token expired
-       * and we deleted their account.
-       */
-      throw new Error('Could not confirm email');
+    } else if (new Date() > user.confirmationTokenExpiry) {
+      throw new Error('Email confirmation has expired, please sign up again');
     } else {
       return dbManager.getDb()
       .collection('users')
       .findOneAndUpdate(
-        { email: req.query.email },
+        { _id: user._id },
         { $set: { isConfirmed: true } }
       );
     }
@@ -46,5 +44,4 @@ export default (req, res) => validate(req.query, Object.assign({}, { email: sche
     } else {
       return 'Email successfully confirmed';
     }
-  })
-  .catch(err => { throw err; });
+  });
