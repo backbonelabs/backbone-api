@@ -2,7 +2,8 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
-import emailUtility from '../../lib/emailUtility';
+import emailService from '../../lib/emailService';
+import tokenFactory from '../../lib/tokenFactory';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -33,37 +34,37 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
   .then(() => (
     // Check if there is already a user with the email
     dbManager.getDb()
-    .collection('users')
-    .findOne({ email: req.body.email })
-    .then(user => {
-      if (user) {
-        // Email is already associated to a confirmed user
-        throw new Error('Email is not available');
-      } else {
-        // Email is not associated to any existing users, hash password
-        return password.hash(req.body.password);
-      }
-    })
-    .then(hash => {
-      // Generate a token and create user
-      const { email } = req.body;
-      const confirmationTokenExpiry = new Date();
-      confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
+      .collection('users')
+      .findOne({ email: req.body.email })
+      .then(user => {
+        if (user) {
+          // Email is already associated to a confirmed user
+          throw new Error('Email is not available');
+        } else {
+          // Email is not associated to any existing users, hash password
+          return password.hash(req.body.password);
+        }
+      })
+      .then(hash => {
+        // Generate a token and create user
+        const { email } = req.body;
+        const confirmationTokenExpiry = new Date();
+        confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
 
-      return emailUtility.generateConfirmationToken()
-      .then((token) => (
-        dbManager.getDb()
-        .collection('users')
-        .insertOne({
-          email,
-          password: hash,
-          isConfirmed: false,
-          createdAt: new Date(),
-          confirmationToken: token,
-          confirmationTokenExpiry,
-        })
-        .then(() => emailUtility.sendConfirmationEmail(email, token))
-      ));
-    })
+        return tokenFactory.createConfirmationToken()
+        .then((confirmationToken) => (
+          dbManager.getDb()
+            .collection('users')
+            .insertOne({
+              email,
+              password: hash,
+              isConfirmed: false,
+              createdAt: new Date(),
+              confirmationToken,
+              confirmationTokenExpiry,
+            })
+            .then(() => emailService.sendConfirmationEmail(email, confirmationToken))
+        ));
+      })
   ))
   .then(() => true);
