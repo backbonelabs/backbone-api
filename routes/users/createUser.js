@@ -46,6 +46,9 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     })
     .then(hash => {
       // Generate a token and create user
+      const confirmationTokenExpiry = new Date();
+      confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
+
       emailUtility.generateConfirmationToken()
       .then((token) => {
         dbManager.getDb()
@@ -56,6 +59,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           isConfirmed: false,
           createdAt: new Date(),
           confirmationToken: token,
+          confirmationTokenExpiry,
         })
         .then(() => emailUtility.sendConfirmationEmail(req.body.email, token));
       });

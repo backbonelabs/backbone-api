@@ -23,13 +23,10 @@ export default (req, res) => validate(req.query, Object.assign({},
   ))
   .then(user => {
     // Create a date object and set to two days ago
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
     if (!user) {
       res.status(400);
-    } else if (user.createdAt < twoDaysAgo) {
-      throw new Error('Confirmation is expired');
+    } else if (new Date() > user.confirmationTokenExpiry) {
+      throw new Error('Email confirmation has expired, please sign up again');
     } else {
       return dbManager.getDb()
       .collection('users')
