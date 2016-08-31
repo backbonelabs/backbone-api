@@ -7,10 +7,12 @@ import server from '../../index';
 
 let app;
 let db;
-let userFixture;
+let unconfirmedUserFixture;
+let confirmedUserFixture;
 let accessTokenFixture;
 
-const testEmail = `test.${randomString()}@${randomString()}.com`;
+const testEmail1 = `test.${randomString()}@${randomString()}.com`;
+const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const accessTokensToDelete = [];
@@ -24,22 +26,32 @@ before(() => Promise.resolve(server)
     db = mDb;
   })
   .then(() => db.collection('users')
-    .insertOne({
-      email: testEmail,
+    .insertMany([{
+      email: testEmail1,
       password: testPasswordHash,
-    })
+    }, {
+      email: testEmail2,
+      password: testPasswordHash,
+      isConfirmed: true,
+    }])
   )
   .then(results => {
-    userFixture = results.ops[0];
+    const ops = results.ops.map(op => ({
+      ...op,
+      _id: op._id.toHexString(),
+    }));
+    unconfirmedUserFixture = ops[0];
+    confirmedUserFixture = ops[1];
   })
   .then(() => db.collection('accessTokens')
     .insertOne({
-      userId: mongodb.ObjectID(userFixture._id),
+      userId: mongodb.ObjectID(confirmedUserFixture._id),
       accessToken: randomString({ length: 64 }),
     })
   )
   .then(results => {
     accessTokenFixture = results.ops[0];
+    accessTokenFixture.userId = accessTokenFixture.userId.toHexString();
     accessTokensToDelete.push(accessTokenFixture.accessToken);
   })
 );
@@ -47,7 +59,14 @@ before(() => Promise.resolve(server)
 after(() => db.collection('accessTokens')
   .deleteMany({ accessToken: { $in: accessTokensToDelete } })
   .then(() => db.collection('users')
-    .deleteOne({ _id: mongodb.ObjectID(userFixture._id) })
+    .deleteMany({
+      _id: {
+        $in: [
+          mongodb.ObjectID(unconfirmedUserFixture._id),
+          mongodb.ObjectID(confirmedUserFixture._id),
+        ],
+      },
+    })
   )
 );
 
@@ -73,7 +92,7 @@ describe('/auth router', () => {
     }));
 
     it('should reject when password is not in request body', () => assertRequestStatusCode(400, {
-      email: testEmail,
+      email: testEmail1,
     }));
 
     it('should reject invalid email formats', () => {
@@ -92,7 +111,7 @@ describe('/auth router', () => {
     });
 
     it('should reject an invalid email/password combination', () => assertRequestStatusCode(401, {
-      email: testEmail,
+      email: testEmail1,
       password: `${testPassword}1`,
     }));
 
@@ -101,30 +120,13 @@ describe('/auth router', () => {
     //   request(app)
     //     .post(url)
     //     .send({
-    //       email: userFixture.email,
+    //       email: unconfirmedUserFixture.email,
     //       password: testPassword,
     //     })
     //     .expect(200)
     //     .expect(res => {
     //       expect(res.body).to.contain.all.keys(['email', 'accessToken']);
-    //       expect(res.body.email).to.equal(userFixture.email);
-    //     })
-    //     .end((err, res) => {
-    //       accessTokensToDelete.push(res.body.accessToken);
-    //       done(err, res);
-    //     });
-    // });
-
-    // it('should return a 64-char access token on confirmed email/password combination', done => {
-    //   request(app)
-    //     .post(url)
-    //     .send({
-    //       email: userFixture.email,
-    //       password: testPassword,
-    //     })
-    //     .expect(200)
-    //     .expect(res => {
-    //       expect(res.body.accessToken.length).to.equal(64);
+    //       expect(res.body.email).to.equal(unconfirmedUserFixture.email);
     //     })
     //     .end((err, res) => {
     //       accessTokensToDelete.push(res.body.accessToken);
@@ -136,14 +138,33 @@ describe('/auth router', () => {
       request(app)
         .post(url)
         .send({
-          email: userFixture.email,
+          email: unconfirmedUserFixture.email,
           password: testPassword,
         })
         .expect(401)
         .expect(res => {
           expect(res.body).to.contain.all.keys(['error']);
         })
+        .end(done);
+    });
+
+    it('should return user profile and access token on valid email/password combination', done => {
+      request(app)
+        .post(url)
+        .send({
+          email: confirmedUserFixture.email,
+          password: testPassword,
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.contain.all.keys(['_id', 'email']);
+          expect(res.body).to.not.contain.all.keys(['password']);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
         .end((err, res) => {
+          if (!err) {
+            accessTokensToDelete.push(res.body.accessToken);
+          }
           done(err, res);
         });
     });
@@ -195,18 +216,35 @@ describe('/auth router', () => {
         .expect(400, done);
     });
 
-    it('should return 200 for a valid access token', done => {
+    it('should return userId for a valid access token', done => {
       request(app)
         .post(url)
         .send({ accessToken: accessTokenFixture.accessToken })
-        .expect(200, done);
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.deep.equal({
+            accessToken: accessTokenFixture.accessToken,
+            isValid: true,
+            userId: accessTokenFixture.userId,
+          });
+        })
+        .end(done);
     });
 
     it('should return 401 for an invalid access token', done => {
+      const accessToken = randomString({ length: 64 });
       request(app)
         .post(url)
-        .send({ accessToken: randomString({ length: 64 }) })
-        .expect(401, done);
+        .send({ accessToken })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.deep.equal({
+            accessToken,
+            isValid: false,
+            userId: null,
+          });
+        })
+        .end(done);
     });
   });
 });
