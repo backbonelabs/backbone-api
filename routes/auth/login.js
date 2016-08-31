@@ -4,6 +4,7 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
+import sanitizeUser from '../../lib/sanitizeUser';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid email/password. Please try again.';
@@ -71,13 +72,12 @@ export default (req, res) => validate(req.body, {
         debug('User auth failed');
         throw new Error(errorMessage);
       })
-      .then(([user, accessToken]) => (
-        // Return user email and access token
-        {
-          email: user.email,
-          accessToken,
-        }
-      ))
+      .then(([user, accessToken]) => {
+        // Return sanitized user object with access token
+        const userResult = sanitizeUser(user);
+        userResult.accessToken = accessToken;
+        return userResult;
+      })
       .catch(err => {
         if (err.message === errorMessage || err.message === notConfirmedMessage) {
           res.status(401);
