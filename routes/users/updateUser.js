@@ -45,8 +45,8 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       .collection('users')
       .updateOne({ _id: dbManager.mongodb.ObjectID(req.params.id) }, { $set: updateFields })
   ))
-  .then(updateWriteOpReesult => {
-    if (!updateWriteOpReesult.modifiedCount) {
+  .then(updateWriteOpResult => {
+    if (!updateWriteOpResult.modifiedCount) {
       // User ID doesn't exist
       throw new Error('Invalid user');
     }
