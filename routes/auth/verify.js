@@ -13,7 +13,7 @@ const debug = Debug('routes:auth:verify');
  * @return {Promise} Resolves with an empty object. Status code will be 200 for a valid
  *                   access token, 401 otherwise.
  */
-export default (req, res) => validate(req.body, {
+export default req => validate(req.body, {
   accessToken: schemas.accessToken,
 }, ['accessToken'])
   .then(() => {
@@ -26,8 +26,9 @@ export default (req, res) => validate(req.body, {
   })
   .then(accessToken => {
     debug(`${accessToken ? 'Found' : 'Did not find'} access token`, accessToken);
-    if (!accessToken) {
-      res.status(401);
-    }
-    return {};
+    return {
+      accessToken: req.body.accessToken,
+      isValid: !!accessToken,
+      userId: accessToken ? accessToken.userId : null,
+    };
   });
