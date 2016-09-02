@@ -12,13 +12,13 @@ export default req =>
         // Return user object without password
         return sanitizeUser(user);
       }
-      const settings = { postureThreshold: 0.1 };
+      const settings = { settings: { postureThreshold: 0.2 } };
 
       return dbManager.getDb()
         .collection('users')
         .updateOne(
           { _id: dbManager.mongodb.ObjectId(req.params.id) },
-          { $set: { settings } }
+          { $set: settings }
         )
         .then(() => Object.assign({}, user, settings));
     });

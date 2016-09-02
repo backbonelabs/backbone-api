@@ -6,13 +6,13 @@ import sanitizeUser from '../../lib/sanitizeUser';
 export default req => validate(req.body, Object.assign({},
   schemas.settings), ['postureThreshold'], ['_id'])
   .then(() => {
-    const settings = req.body;
+    const settings = { settings: req.body };
 
     return dbManager.getDb()
       .collection('users')
       .updateOne(
         { _id: dbManager.mongodb.ObjectID(req.params.id) },
-        { $set: { settings } }
+        { $set: settings }
       );
   })
   .then(updateWriteOpResult => {
