@@ -3,8 +3,7 @@ import validate from '../../lib/validate';
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 
-export default req => validate(req.body, Object.assign({},
-  schemas.settings), ['postureThreshold'], ['_id'])
+export default req => validate(req.body, schemas.settings, [], ['_id'])
   .then(() => {
     const settings = { settings: req.body };
 
