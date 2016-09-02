@@ -4,15 +4,17 @@ import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 
 export default req => validate(req.body, Object.assign({},
-  schemas.user), [], ['_id'])
-  .then(() =>
-    dbManager.getDb()
+  schemas.settings), ['postureThreshold'], ['_id'])
+  .then(() => {
+    const settings = req.body;
+
+    return dbManager.getDb()
       .collection('users')
       .updateOne(
         { _id: dbManager.mongodb.ObjectID(req.params.id) },
-        { $set: { settings: req.body.settings } }
-      )
-  )
+        { $set: { settings } }
+      );
+  })
   .then(updateWriteOpResult => {
     if (!updateWriteOpResult.modifiedCount) {
       // User ID doesn't exist

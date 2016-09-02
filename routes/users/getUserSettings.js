@@ -7,7 +7,7 @@ export default req =>
     .findOne({ _id: dbManager.mongodb.ObjectId(req.params.id) })
     .then(user => {
       if (!user) {
-        throw new Error('No usr found');
+        throw new Error('No user found');
       } else if (user && user.settings) {
         // Return user object without password
         return sanitizeUser(user);
@@ -18,8 +18,7 @@ export default req =>
         .collection('users')
         .updateOne(
           { _id: dbManager.mongodb.ObjectId(req.params.id) },
-          { settings },
-          { upsert: true }
+          { $set: { settings } }
         )
         .then(() => Object.assign({}, user, settings));
     });
