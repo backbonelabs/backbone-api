@@ -3,6 +3,11 @@ import validate from '../../lib/validate';
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 
+/**
+ * Updates feature settings for a user
+ * @param  {Object} req Request
+ * @return {Promise} Resolves with the user object containing the updated attributes, sans password
+ */
 export default req => validate(req.body, schemas.settings)
   .then(() => {
     const settings = { settings: req.body };

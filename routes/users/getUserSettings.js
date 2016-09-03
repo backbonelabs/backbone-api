@@ -1,6 +1,11 @@
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 
+/**
+ * Returns a user, and if the user does not have settings defined, default settings will be used
+ * @param  {Object} req Request
+ * @return {Promise} Resolves with the user object, sans password
+ */
 export default req => (
   dbManager.getDb()
     .collection('users')
