@@ -1,7 +1,6 @@
 import schemas from '../../lib/schemas';
 import validate from '../../lib/validate';
 import dbManager from '../../lib/dbManager';
-import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
  * Updates feature settings for a user
@@ -26,6 +25,6 @@ export default req => validate(req.body, schemas.settings)
       throw new Error('Invalid user');
     }
 
-    // Return updated user
-    return sanitizeUser(result.value);
+    // Return updated user settings
+    return result.value.settings;
   });

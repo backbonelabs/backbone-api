@@ -1,10 +1,10 @@
 import dbManager from '../../lib/dbManager';
-import sanitizeUser from '../../lib/sanitizeUser';
+import defaultUserSettings from '../../lib/defaultUserSettings';
 
 /**
- * Returns a user, and if the user does not have settings defined, default settings will be used
+ * Returns settings for a user. If no settings exist, default settings will be applied to the user.
  * @param  {Object} req Request
- * @return {Promise} Resolves with the user object, sans password
+ * @return {Promise} Resolves with an object representing the user's settings
  */
 export default req => (
   dbManager.getDb()
@@ -15,12 +15,12 @@ export default req => (
         throw new Error('No user found');
       } else if (user && user.settings) {
         // User exists and has existing settings
-        // Return user object without password
-        return sanitizeUser(user);
+        // Return existing user settings
+        return user.settings;
       }
       // User exists but does not have any existing settings
       // Set default settings
-      const settings = { settings: { postureThreshold: 0.2 } };
+      const settings = { settings: defaultUserSettings };
 
       return dbManager.getDb()
         .collection('users')
@@ -35,8 +35,8 @@ export default req => (
             throw new Error('Invalid user');
           }
 
-          // Return updated user
-          return sanitizeUser(result.value);
+          // Return user settings
+          return result.value.settings;
         });
     })
 );
