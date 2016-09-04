@@ -1,5 +1,13 @@
 import dbManager from '../../lib/dbManager';
+import sanitizeUser from '../../lib/sanitizeUser';
 
+/**
+ * Returns a user profile
+ * @param  {Object} req           Request
+ * @param  {Object} req.params    Request parameters
+ * @param  {String} req.params.id User ID
+ * @return {Promise} Resolves with the user object, sans password
+ */
 export default req => {
   const id = req.params.id;
   return dbManager.getDb()
@@ -8,9 +16,7 @@ export default req => {
     .then(user => {
       if (user) {
         // Return user object without password
-        const userSansPassword = Object.assign({}, user);
-        delete userSansPassword.password;
-        return userSansPassword;
+        return sanitizeUser(user);
       }
       throw new Error('No user found');
     });
