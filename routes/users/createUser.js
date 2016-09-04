@@ -4,6 +4,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
+import userSettings from '../../lib/userSettings';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -61,6 +62,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           createdAt: new Date(),
           confirmationToken: token,
           confirmationTokenExpiry,
+          settings: userSettings.defaults,
         })
         .then(() => emailUtility.sendConfirmationEmail(req.body.email, token))
       ));
