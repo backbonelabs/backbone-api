@@ -25,6 +25,7 @@ export default (req, res) => validate(req.query, Object.assign({},
     // Create a date object and set to two days ago
     if (!user) {
       res.status(400);
+      throw new Error('Invalid confirmation link. Please try again.');
     } else if (new Date() > user.confirmationTokenExpiry) {
       throw new Error('Email confirmation has expired, please sign up again');
     } else {
