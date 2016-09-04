@@ -25,7 +25,6 @@ export default (req, res) => {
       }
     })
     .then(([user, accessToken]) => {
-      console.log('user ', user, ' accessToken ', accessToken);
       // Return sanitized user object with access token
       const userResult = sanitizeUser(user);
       userResult.accessToken = accessToken;
