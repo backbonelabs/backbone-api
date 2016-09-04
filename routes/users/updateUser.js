@@ -43,17 +43,18 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     // Attempt to update the user
     dbManager.getDb()
       .collection('users')
-      .updateOne({ _id: dbManager.mongodb.ObjectID(req.params.id) }, { $set: updateFields })
+      .findOneAndUpdate(
+        { _id: dbManager.mongodb.ObjectID(req.params.id) },
+        { $set: updateFields },
+        { returnOriginal: false }
+      )
   ))
-  .then(updateWriteOpResult => {
-    if (!updateWriteOpResult.modifiedCount) {
+  .then(result => {
+    if (!result.value) {
       // User ID doesn't exist
       throw new Error('Invalid user');
     }
 
-    // Get updated user document
-    return dbManager.getDb()
-      .collection('users')
-      .findOne({ _id: dbManager.mongodb.ObjectID(req.params.id) });
-  })
-  .then(user => sanitizeUser(user));
+    // Return updated user
+    return sanitizeUser(result.value);
+  });

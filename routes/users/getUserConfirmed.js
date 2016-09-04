@@ -2,6 +2,14 @@ import dbManager from '../../lib/dbManager';
 import tokenFactory from '../../lib/tokenFactory';
 import sanitizeUser from '../../lib/sanitizeUser';
 
+/**
+ * Checks if a user is confirmed
+ * @param  {Object} req              Request
+ * @param  {Object} req.params       Request parameters
+ * @param  {String} req.params.email User's email address
+ * @param  {Object} res              Response
+ * @return {Promise} Resolves with a boolean indicating whether the user is confirmed or not
+ */
 export default (req, res) => {
   const email = req.params.email;
   return dbManager.getDb()
