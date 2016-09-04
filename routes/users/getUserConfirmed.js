@@ -18,6 +18,7 @@ export default (req, res) => {
     .then(user => {
       if (user && !user.isConfirmed) {
         res.status(401);
+        throw new Error('User has not confirmed email.');
       } else if (user && user.isConfirmed) {
         const { _id: userId } = user;
 
@@ -30,6 +31,7 @@ export default (req, res) => {
           ));
       } else {
         // TODO: Stop app from scanning, since user doesn't exist
+        throw new Error('This user does not exist.');
       }
     })
     .then(([user, accessToken]) => {
