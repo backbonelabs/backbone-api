@@ -7,7 +7,7 @@ import passwordUtil from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 
 const debug = Debug('routes:auth:login');
-const errorMessage = 'Invalid email/password. Please try again.';
+const errorMessage = 'Invalid login credentials. Please try again.';
 const notConfirmedMessage = 'Email is not confirmed. Please check your inbox.';
 
 /**
@@ -15,73 +15,117 @@ const notConfirmedMessage = 'Email is not confirmed. Please check your inbox.';
  * object with an access token that the user can use in subsequent requests
  * to access protected API endpoints. The access token is a hash of the user
  * ID and current timestamp separated by a colon.
- * @param  {Object} req               Request
- * @param  {Object} req.body          Request body
- * @param  {String} req.body.email    Email address
- * @param  {String} req.body.password Password
- * @return {Promise} Resolves with an object that includes the email and access
- *                   token: {email, accessToken}
+ *
+ * If an access token is provided in lieu of an email and password, then a query
+ * will be made to find a user account associated to the provided access token.
+ * If there is a matching user account, the access token will be replaced with
+ * a new access token and the new access token will be returned.
+ * @param  {Object} req                  Request
+ * @param  {Object} req.body             Request body
+ * @param  {String} req.body.email       Email address of the user
+ * @param  {String} req.body.password    Password of the user
+ * @param  {String} req.body.accessToken Access token associated to the user (will
+ *                                       only be used if email and password are
+ *                                       not available)
+ * @return {Promise} Resolves with a user object
  */
 export default (req, res) => validate(req.body, {
   email: schemas.user.email,
   password: schemas.password,
-}, ['email', 'password'])
+  accessToken: schemas.accessToken,
+})
   .then(() => {
-    const { email, password } = req.body;
-    // Check if there is a user with the email address
-    return dbManager.getDb()
-      .collection('users')
-      .find({ email })
-      .limit(1)
-      .next()
-      .then(user => {
-        if (user) {
-          debug('Found user by email', email);
+    const { email, password, accessToken } = req.body;
+
+    if (email && !password) {
+      throw new Error('Password required');
+    } else if (!email && password) {
+      throw new Error('Email required');
+    } else if (!email && !password && !accessToken) {
+      throw new Error('Missing authentication credentials');
+    }
+
+    if (email && password) {
+      // Look up user by email and password
+      return dbManager.getDb()
+        .collection('users')
+        .find({ email })
+        .limit(1)
+        .next()
+        .then(user => {
+          if (user) {
+            debug('Found user by email', email);
+            return user;
+          }
+          debug('Did not find user by email', email);
+          throw new Error(errorMessage);
+        })
+        .then(user => (
+          // Verify password matches
+          Promise.all([user, passwordUtil.verify(password, user.password)])
+        ))
+        .then(([user, isPasswordMatch]) => {
+          if (isPasswordMatch && !user.isConfirmed) {
+            throw new Error('Email is not confirmed. Please check your inbox.');
+          } else if (!isPasswordMatch) {
+            throw new Error(errorMessage);
+          }
           return user;
-        }
-        debug('Did not find user by email', email);
-        throw new Error(errorMessage);
-      })
-      .then(user => (
-        // Verify password matches
-        Promise.all([user, passwordUtil.verify(password, user.password)])
-      ))
-      .then(([user, isPasswordMatch]) => {
-        if (isPasswordMatch && !user.isConfirmed) {
-          throw new Error('Email is not confirmed. Please check your inbox.');
-        } else if (isPasswordMatch && user.isConfirmed) {
-          // Generate an access token
-          const { _id: userId } = user;
-          const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
-          hmac.update(`${userId}:${Date.now()}`);
-          const accessToken = hmac.digest('hex');
-          debug('User auth success, generated access token', accessToken);
+        });
+    }
 
-          // Something to consider: this will not inactivate previous access tokens for
-          // the user on each login. Do we want to inactivate old access tokens after every
-          // login so that there is always only one active access token per user at any
-          // given time?
-
-          // Store access token with the user in the database
-          // TODO: If this creates a bottleneck, we should store valid access tokens in Redis
+    // Look up user by access token
+    debug('Looking up user by access token', accessToken);
+    // Use findOneAndDelete because if a user is found by access token,
+    // a new access token will be generated, and if no user is found,
+    // then there's no point in keeping the access token
+    return dbManager.getDb()
+      .collection('accessTokens')
+      .findOneAndDelete({ accessToken })
+      .then(result => {
+        const accessTokenRecord = result.value;
+        if (accessTokenRecord) {
+          debug('Found and deleted access token', accessTokenRecord);
           return dbManager.getDb()
-            .collection('accessTokens')
-            .insertOne({ userId, accessToken })
-            .then(() => [user, accessToken]);
+            .collection('users')
+            .find({ _id: dbManager.mongodb.ObjectId(accessTokenRecord.userId) })
+            .limit(1)
+            .next()
+            .then(user => {
+              if (user) {
+                debug('Found user by access token', accessToken);
+                return user;
+              }
+              debug('Did not find user by access token', accessToken);
+              throw new Error(errorMessage);
+            });
         }
-        debug('User auth failed');
+        debug('Did not find access token', accessToken);
         throw new Error(errorMessage);
-      })
-      .then(([user, accessToken]) => {
-        // Return sanitized user object with access token
-        const userResult = sanitizeUser(user);
-        userResult.accessToken = accessToken;
-        return userResult;
-      })
-      .catch(err => {
-        if (err.message === errorMessage || err.message === notConfirmedMessage) {
-          res.status(401);
-        }
-        throw err;
       });
+  })
+  .then(user => {
+    // Generate an access token
+    const { _id: userId } = user;
+    const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
+    hmac.update(`${userId}:${Date.now()}`);
+    const accessToken = hmac.digest('hex');
+    debug('Generated access token', accessToken);
+
+    return dbManager.getDb()
+      .collection('accessTokens')
+      .insertOne({ userId, accessToken })
+      .then(() => [user, accessToken]);
+  })
+  .then(([user, accessToken]) => {
+    // Return sanitized user object with access token
+    const userResult = sanitizeUser(user);
+    userResult.accessToken = accessToken;
+    return userResult;
+  })
+  .catch(err => {
+    if (err.message === errorMessage || err.message === notConfirmedMessage) {
+      res.status(401);
+    }
+    throw err;
   });
