@@ -1,10 +1,10 @@
-import crypto from 'crypto';
 import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
+import tokenFactory from '../../lib/tokenFactory';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid login credentials. Please try again.';
@@ -107,15 +107,16 @@ export default (req, res) => validate(req.body, {
   .then(user => {
     // Generate an access token
     const { _id: userId } = user;
-    const hmac = crypto.createHmac('sha256', process.env.BL_ACCESS_TOKEN_SECRET);
-    hmac.update(`${userId}:${Date.now()}`);
-    const accessToken = hmac.digest('hex');
-    debug('Generated access token', accessToken);
 
-    return dbManager.getDb()
-      .collection('accessTokens')
-      .insertOne({ userId, accessToken })
-      .then(() => [user, accessToken]);
+    return tokenFactory.createAccessToken(userId)
+      .then(accessToken => {
+        debug('Generated access token', accessToken);
+
+        return dbManager.getDb()
+          .collection('accessTokens')
+          .insertOne({ userId, accessToken })
+          .then(() => [user, accessToken]);
+      });
   })
   .then(([user, accessToken]) => {
     // Return sanitized user object with access token

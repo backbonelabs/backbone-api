@@ -1,4 +1,6 @@
 import dbManager from '../../lib/dbManager';
+import tokenFactory from '../../lib/tokenFactory';
+import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
  * Checks if a user is confirmed
@@ -16,7 +18,26 @@ export default (req, res) => {
     .then(user => {
       if (user && !user.isConfirmed) {
         res.status(401);
+        throw new Error('User has not confirmed email.');
+      } else if (user && user.isConfirmed) {
+        const { _id: userId } = user;
+
+        return tokenFactory.createAccessToken(userId)
+          .then(accessToken => (
+            dbManager.getDb()
+              .collection('accessTokens')
+              .insertOne({ userId, accessToken })
+              .then(() => [user, accessToken])
+          ));
+      } else {
+        // TODO: Stop app from scanning, since user doesn't exist
+        throw new Error('This user does not exist.');
       }
-      return user.isConfirmed;
+    })
+    .then(([user, accessToken]) => {
+      // Return sanitized user object with access token
+      const userResult = sanitizeUser(user);
+      userResult.accessToken = accessToken;
+      return userResult;
     });
 };

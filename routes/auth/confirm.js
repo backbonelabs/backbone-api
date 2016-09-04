@@ -24,7 +24,7 @@ export default (req, res) => validate(req.query, Object.assign({},
   .then(user => {
     // Create a date object and set to two days ago
     if (!user) {
-      res.status(400);
+      throw new Error('Invalid confirmation link. Please try again.');
     } else if (new Date() > user.confirmationTokenExpiry) {
       throw new Error('Email confirmation has expired, please sign up again');
     } else {
@@ -42,6 +42,6 @@ export default (req, res) => validate(req.query, Object.assign({},
       // Check if user agent is iOS and redirect to app URL
       res.redirect('backbone://');
     } else {
-      return 'Email successfully confirmed';
+      res.send('Email successfully confirmed');
     }
   });

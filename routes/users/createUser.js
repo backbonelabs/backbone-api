@@ -2,6 +2,7 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
+import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
 
 /**
@@ -49,7 +50,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       const confirmationTokenExpiry = new Date();
       confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
 
-      return emailUtility.generateConfirmationToken()
+      return tokenFactory.createConfirmationToken()
       .then((token) => (
         dbManager.getDb()
         .collection('users')
