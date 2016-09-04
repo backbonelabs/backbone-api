@@ -42,6 +42,6 @@ export default (req, res) => validate(req.query, Object.assign({},
       // Check if user agent is iOS and redirect to app URL
       res.redirect('backbone://');
     } else {
-      return 'Email successfully confirmed';
+      res.send('Email successfully confirmed');
     }
   });
