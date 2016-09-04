@@ -95,6 +95,10 @@ describe('/auth router', () => {
       email: testEmail1,
     }));
 
+    it('should reject when email, password, and access token are not in request body', () => (
+      assertRequestStatusCode(400, {})
+    ));
+
     it('should reject invalid email formats', () => {
       const password = { password: testPassword };
       const simpleWord = 'email';
@@ -113,6 +117,10 @@ describe('/auth router', () => {
     it('should reject an invalid email/password combination', () => assertRequestStatusCode(401, {
       email: testEmail1,
       password: `${testPassword}1`,
+    }));
+
+    it('should reject an invalid access token', () => assertRequestStatusCode(401, {
+      accessToken: randomString({ length: 64 }),
     }));
 
     // TODO: Write tests that include check for whether user `isConfirmed`
@@ -168,6 +176,25 @@ describe('/auth router', () => {
           done(err, res);
         });
     });
+
+    it('should return user profile and new access token on valid access token', done => {
+      request(app)
+        .post(url)
+        .send({ accessToken: accessTokenFixture.accessToken })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.contain.all.keys(['_id', 'email']);
+          expect(res.body).to.not.contain.all.keys(['password']);
+          expect(res.body.accessToken).to.not.equal(accessTokenFixture.accessToken);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
+        .end((err, res) => {
+          if (!err) {
+            accessTokensToDelete.push(res.body.accessToken);
+          }
+          done(err, res);
+        });
+    });
   });
 
   describe('POST /logout', () => {
@@ -204,47 +231,5 @@ describe('/auth router', () => {
     //         });
     //     });
     // });
-  });
-
-  describe('POST /verify', () => {
-    const url = '/auth/verify';
-
-    it('should reject an invalid access token format', done => {
-      request(app)
-        .post(url)
-        .send({ accessToken: 'foo' })
-        .expect(400, done);
-    });
-
-    it('should return userId for a valid access token', done => {
-      request(app)
-        .post(url)
-        .send({ accessToken: accessTokenFixture.accessToken })
-        .expect(200)
-        .expect(res => {
-          expect(res.body).to.deep.equal({
-            accessToken: accessTokenFixture.accessToken,
-            isValid: true,
-            userId: accessTokenFixture.userId,
-          });
-        })
-        .end(done);
-    });
-
-    it('should return 401 for an invalid access token', done => {
-      const accessToken = randomString({ length: 64 });
-      request(app)
-        .post(url)
-        .send({ accessToken })
-        .expect(200)
-        .expect(res => {
-          expect(res.body).to.deep.equal({
-            accessToken,
-            isValid: false,
-            userId: null,
-          });
-        })
-        .end(done);
-    });
   });
 });
