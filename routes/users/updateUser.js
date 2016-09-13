@@ -3,6 +3,8 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
+import tokenFactory from '../../lib/tokenFactory';
+import emailUtility from '../../lib/emailUtility';
 
 /**
  * Updates a user
@@ -37,6 +39,29 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         });
     }
 
+    return body;
+  })
+  .then(body => {
+    const { email } = body;
+
+    // Check if email is already taken
+    if (email) {
+      return dbManager.getDb()
+      .collection('users')
+      .findOne({ email })
+      .then(result => {
+        if (result) {
+          throw new Error('Email already taken');
+        }
+        return tokenFactory.createConfirmationToken()
+          .then(([token, tokenExpiry]) =>
+            // Q: Would it be ok to mutate body? Or should I set the result to a new variable?
+            Object.assign(body, { confirmationToken: token, confirmationTokenExpiry: tokenExpiry })
+          )
+          .then(() => emailUtility.sendConfirmationEmail(email, body.confirmationToken)
+          .then(() => body));
+      });
+    }
     return body;
   })
   .then(updateFields => (
