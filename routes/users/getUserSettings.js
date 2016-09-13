@@ -1,6 +1,6 @@
 import { get, isEqual } from 'lodash';
 import dbManager from '../../lib/dbManager';
-import userSettings from '../../lib/userSettings';
+import userDefaults from '../../lib/userDefaults';
 
 /**
  * Returns settings for a user. If the user is missing settings, default values for the
@@ -19,7 +19,7 @@ export default req => (
         // Get user's existing settings
         const existingSettings = get(user, 'settings', {});
         // Merge user's settings with default settings
-        const mergedSettings = userSettings.mergeWithDefaults(existingSettings);
+        const mergedSettings = userDefaults.mergeWithDefaultSettings(existingSettings);
 
         if (isEqual(existingSettings, mergedSettings)) {
           // User already has all settings defined
