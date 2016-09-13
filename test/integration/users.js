@@ -294,7 +294,7 @@ describe('/users router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect(res => {
-          expect(res.body).to.deep.equal(userDefaults.defaults);
+          expect(res.body).to.deep.equal(userDefaults.settings);
         })
         .end(done);
     });
