@@ -49,17 +49,17 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     .then(hash => (
       // Generate a token and token expiry
       tokenFactory.createConfirmationToken()
-        .then(([token, tokenExpiry]) => (
+        .then(([confirmationToken, confirmationTokenExpiry]) => (
           dbManager.getDb()
             .collection('users')
             .insertOne(userDefaults.mergeWithDefaultProfile({
               email: req.body.email,
               password: hash,
               createdAt: new Date(),
-              confirmationToken: token,
-              confirmationTokenExpiry: tokenExpiry,
+              confirmationToken,
+              confirmationTokenExpiry,
             }))
-            .then(() => emailUtility.sendConfirmationEmail(req.body.email, token))
+            .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
       ))
     ))
   ))

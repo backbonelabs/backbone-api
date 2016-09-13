@@ -54,9 +54,8 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           throw new Error('Email already taken');
         }
         return tokenFactory.createConfirmationToken()
-          .then(([token, tokenExpiry]) =>
-            // Q: Would it be ok to mutate body? Or should I set the result to a new variable?
-            Object.assign(body, { confirmationToken: token, confirmationTokenExpiry: tokenExpiry })
+          .then(([confirmationToken, confirmationTokenExpiry]) =>
+            Object.assign(body, { confirmationToken, confirmationTokenExpiry })
           )
           .then(() => emailUtility.sendConfirmationEmail(email, body.confirmationToken)
           .then(() => body));
