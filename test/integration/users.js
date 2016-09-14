@@ -4,7 +4,7 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
-import userSettings from '../../lib/userSettings';
+import userDefaults from '../../lib/userDefaults';
 
 let app;
 let db;
@@ -294,7 +294,7 @@ describe('/users router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect(res => {
-          expect(res.body).to.deep.equal(userSettings.defaults);
+          expect(res.body).to.deep.equal(userDefaults.settings);
         })
         .end(done);
     });
@@ -305,7 +305,7 @@ describe('/users router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect(res => {
-          const mergedSettings = userSettings.mergeWithDefaults(testSettings);
+          const mergedSettings = userDefaults.mergeWithDefaultSettings(testSettings);
           expect(res.body).to.deep.equal(mergedSettings);
         })
         .end(done);

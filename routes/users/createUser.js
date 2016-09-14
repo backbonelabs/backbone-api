@@ -4,7 +4,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
-import userSettings from '../../lib/userSettings';
+import userDefaults from '../../lib/userDefaults';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -46,26 +46,21 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         return password.hash(req.body.password);
       }
     })
-    .then(hash => {
-      // Generate a token and create user
-      const confirmationTokenExpiry = new Date();
-      confirmationTokenExpiry.setDate(confirmationTokenExpiry.getDate() + 2);
-
-      return tokenFactory.createConfirmationToken()
-      .then((token) => (
-        dbManager.getDb()
-        .collection('users')
-        .insertOne({
-          email: req.body.email,
-          password: hash,
-          isConfirmed: false,
-          createdAt: new Date(),
-          confirmationToken: token,
-          confirmationTokenExpiry,
-          settings: userSettings.defaults,
-        })
-        .then(() => emailUtility.sendConfirmationEmail(req.body.email, token))
-      ));
-    })
+    .then(hash => (
+      // Generate a token and token expiry
+      tokenFactory.createConfirmationToken()
+        .then(([confirmationToken, confirmationTokenExpiry]) => (
+          dbManager.getDb()
+            .collection('users')
+            .insertOne(userDefaults.mergeWithDefaultProfile({
+              email: req.body.email,
+              password: hash,
+              createdAt: new Date(),
+              confirmationToken,
+              confirmationTokenExpiry,
+            }))
+            .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+      ))
+    ))
   ))
   .then(() => (true));
