@@ -32,7 +32,10 @@ export default (req, res) => validate(req.query, Object.assign({},
       .collection('users')
       .findOneAndUpdate(
         { _id: user._id },
-        { $set: { isConfirmed: true } }
+        { $set: {
+          isConfirmed: true,
+          isRecovered: true,
+        } }
       );
     }
   })
