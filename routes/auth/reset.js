@@ -19,9 +19,9 @@ export default req => validate(req.body, schemas.user, [], ['_id'])
   ))
   .then((user) => {
     if (!user) {
-      // Throw an error, but don't display it to user
-      throw new Error('This user does not exist');
+      // For security purposes, we probably shouldn't expose whether a user exists or not
     } else if (user && user.isConfirmed) {
+      // User exists and has previously confirmed their email already, send a password reset email
       return tokenFactory.createConfirmationToken()
         .then(([confirmationToken, confirmationTokenExpiry]) => (
           dbManager.getDb()
@@ -29,15 +29,13 @@ export default req => validate(req.body, schemas.user, [], ['_id'])
             .findOneAndUpdate(
               { email: req.body.email },
               { $set: {
-                isRecovered: false,
                 confirmationToken,
                 confirmationTokenExpiry,
               } }
             )
-            .then((updatedUser) => (
-              emailUtility.sendConfirmationEmail(updatedUser.value.email, confirmationToken)
-                .then(() => true)
-            ))
+            .then((updatedUser) =>
+              emailUtility.sendPasswordResetEmail(updatedUser.value.email, confirmationToken)
+            )
         ));
     }
   });

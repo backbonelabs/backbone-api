@@ -19,10 +19,7 @@ export default (req, res) => {
       if (user && !user.isConfirmed) {
         res.status(401);
         throw new Error('User has not confirmed email.');
-      } else if (user && !user.isRecovered) {
-        res.status(401);
-        throw new Error('User has not confirmed email.');
-      } else if (user && user.isConfirmed && user.isRecovered) {
+      } else if (user && user.isConfirmed) {
         const { _id: userId } = user;
 
         return tokenFactory.createAccessToken(userId)

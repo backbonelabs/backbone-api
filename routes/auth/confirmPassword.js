@@ -22,29 +22,21 @@ export default (req, res) => validate(req.query, Object.assign({},
     })
   ))
   .then(user => {
-    // Create a date object and set to two days ago
     if (!user) {
-      throw new Error('Invalid confirmation link. Please try again.');
+      throw new Error('Invalid email confirmation link. Please try again.');
     } else if (new Date() > user.confirmationTokenExpiry) {
       throw new Error('Email confirmation has expired, please sign up again');
-    } else {
-      return dbManager.getDb()
-      .collection('users')
-      .findOneAndUpdate(
-        { _id: user._id },
-        { $set: {
-          isConfirmed: true,
-          isRecovered: true,
-        } }
-      );
     }
   })
   .then(() => {
     const useragent = uaParser(req.headers['user-agent']);
     if (useragent.os.name === 'iOS') {
-      // Check if user agent is iOS and redirect to app URL
+      // Check if user agent is iOS and redirect to app
       res.redirect('backbone://');
+    } else if (useragent.os.name === 'Android') {
+      // Check if user agent is Android and redirect to app
     } else {
-      res.send('Email successfully confirmed');
+      // Redirect user to our web (or mobile?) app to change password
+      res.send('Password request successfully confirmed');
     }
   });
