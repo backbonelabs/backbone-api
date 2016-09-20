@@ -1,6 +1,5 @@
-import { get, isEqual } from 'lodash';
+import { get } from 'lodash';
 import dbManager from '../../lib/dbManager';
-import userDefaults from '../../lib/userDefaults';
 
 /**
  * Returns settings for a user. If the user is missing settings, default values for the
@@ -18,20 +17,20 @@ export default req => (
       } else {
         // Get user's existing settings
         const existingSettings = get(user, 'settings', {});
-        // Merge user's settings with default settings
-        const mergedSettings = userDefaults.mergeWithDefaultSettings(existingSettings);
+        // // Merge user's settings with default settings
+        // const mergedSettings = userDefaults.mergeWithDefaultSettings(existingSettings);
 
-        if (isEqual(existingSettings, mergedSettings)) {
-          // User already has all settings defined
-          return existingSettings;
-        }
+        // if (isEqual(existingSettings, mergedSettings)) {
+        //   // User already has all settings defined
+        //   return existingSettings;
+        // }
 
-        // User is missing settings, fill missing settings with default values
+        // // User is missing settings, fill missing settings with default values
         return dbManager.getDb()
           .collection('users')
           .findOneAndUpdate(
             { _id: dbManager.mongodb.ObjectId(req.params.id) },
-            { $set: { settings: mergedSettings } },
+            { $set: { settings: existingSettings } },
             { returnOriginal: false }
           )
           .then(result => {
