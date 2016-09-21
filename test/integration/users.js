@@ -4,7 +4,6 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
-import userDefaults from '../../lib/userDefaults';
 
 let app;
 let db;
