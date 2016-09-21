@@ -4,7 +4,6 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
-import userDefaults from '../../lib/userDefaults';
 
 let app;
 let db;
@@ -255,60 +254,6 @@ describe('/users router', () => {
         .then(isPasswordMatches => {
           expect(isPasswordMatches).to.be.true;
         });
-    });
-  });
-
-  describe('GET /settings/:id', () => {
-    let url;
-
-    before(() => {
-      url = `/users/settings/${userFixtureNoSettings._id}`;
-    });
-
-    it('should respond with 401 on missing authorization credentials', done => {
-      request(app)
-        .get(url)
-        .expect(401)
-        .end(done);
-    });
-
-    it('should respond with 401 on invalid access token', done => {
-      request(app)
-        .get(url)
-        .set('Authorization', 'Bearer 123')
-        .expect(401)
-        .end(done);
-    });
-
-    it('should respond with 400 on invalid user id', done => {
-      request(app)
-        .get(`/users/settings/${randomString({ length: 24 })}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
-        .expect(400)
-        .end(done);
-    });
-
-    it('should return default user settings when no settings exist', done => {
-      request(app)
-        .get(url)
-        .set('Authorization', `Bearer ${testAccessToken}`)
-        .expect(200)
-        .expect(res => {
-          expect(res.body).to.deep.equal(userDefaults.settings);
-        })
-        .end(done);
-    });
-
-    it('should return merged user settings when settings exist', done => {
-      request(app)
-        .get(`/users/settings/${userFixtureWithSettings._id}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
-        .expect(200)
-        .expect(res => {
-          const mergedSettings = userDefaults.mergeWithDefaultSettings(testSettings);
-          expect(res.body).to.deep.equal(mergedSettings);
-        })
-        .end(done);
     });
   });
 
