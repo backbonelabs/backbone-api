@@ -52,7 +52,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         .then(([confirmationToken, confirmationTokenExpiry]) => (
           dbManager.getDb()
             .collection('users')
-            .insertOne(userDefaults.mergeWithDefaultProfile({
+            .insertOne(userDefaults.mergeWithDefaultData({
               email: req.body.email,
               password: hash,
               createdAt: new Date(),
