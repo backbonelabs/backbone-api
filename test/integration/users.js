@@ -305,7 +305,7 @@ describe('/users router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect(res => {
-          const mergedSettings = userDefaults.mergeWithDefaultSettings(testSettings);
+          const mergedSettings = userDefaults.mergeWithDefaultData(testSettings);
           expect(res.body).to.deep.equal(mergedSettings);
         })
         .end(done);
