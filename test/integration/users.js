@@ -145,6 +145,47 @@ describe('/users router', () => {
     // });
   });
 
+  describe('GET /:id', () => {
+    const url = '/users';
+
+    it('should respond with 401 on missing authorization credentials', done => {
+      request(app)
+        .get(`${url}/${userFixture._id}`)
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with 401 on invalid access token', done => {
+      request(app)
+        .get(`${url}/${userFixture._id}`)
+        .set('Authorization', 'Bearer 123')
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with a 400 on an invalid id', done => {
+      request(app)
+        .get(`${url}/abcdef123456abcdef123456`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(400)
+        .expect({ error: 'No user found' })
+        .end(done);
+    });
+
+    it('should return a user object without password data', done => {
+      request(app)
+        .get(`${url}/${userFixture._id}`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.not.have.ownProperty('password');
+        })
+        .end(done);
+    });
+  });
+
   describe('POST /:id', () => {
     let url;
 
