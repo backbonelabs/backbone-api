@@ -4,17 +4,16 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
+import userDefaults from '../../lib/userDefaults';
 
 let app;
 let db;
-let userFixtureNoSettings = {};
-let userFixtureWithSettings = {};
+let userFixture = {};
 
-const testEmail1 = `test.${randomString()}@${randomString()}.com`;
-const testEmail2 = `test.${randomString()}@${randomString()}.com`;
+const { mergeWithDefaultData } = userDefaults;
+const testEmail = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
-const testSettings = { postureThreshold: 0.6, foo: 'bar' };
 const testAccessToken = 'testAccessToken';
 const userIdsToDelete = [];
 
@@ -26,20 +25,14 @@ before(() => Promise.resolve(server)
   .then(mDb => {
     db = mDb;
   })
-  .then(() => db.collection('users').insertMany([{
-    email: testEmail1,
+  .then(() => db.collection('users').insertOne(mergeWithDefaultData({
+    email: testEmail,
     password: testPasswordHash,
-  }, {
-    email: testEmail2,
-    password: testPasswordHash,
-    settings: testSettings,
-  }]))
+  })))
   .then(results => {
-    userFixtureNoSettings = results.ops[0];
-    userFixtureWithSettings = results.ops[1];
-    userFixtureNoSettings._id = userFixtureNoSettings._id.toHexString();
-    userFixtureWithSettings._id = userFixtureWithSettings._id.toHexString();
-    userIdsToDelete.push(userFixtureNoSettings._id, userFixtureWithSettings._id);
+    userFixture = results.ops[0];
+    userFixture._id = userFixture._id.toHexString();
+    userIdsToDelete.push(userFixture._id);
   })
   .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
 );
@@ -76,8 +69,8 @@ describe('/users router', () => {
     }));
 
     it('should reject when only one password field is in request body', () => Promise.all([
-      assert400Request({ email: testEmail1, password: testPassword }),
-      assert400Request({ email: testEmail1, verifyPassword: testPassword }),
+      assert400Request({ email: testEmail, password: testPassword }),
+      assert400Request({ email: testEmail, verifyPassword: testPassword }),
     ]));
 
     it('should reject invalid email formats', () => {
@@ -97,7 +90,7 @@ describe('/users router', () => {
 
     it('should reject invalid password formats', () => {
       /* eslint-disable max-len */
-      const email = { email: testEmail1 };
+      const email = { email: testEmail };
       const tooShort = 'fO0';
       const tooLong = 'fO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@r';
       const allLowerCase = 'melatoninislife';
@@ -121,13 +114,13 @@ describe('/users router', () => {
     });
 
     it('should reject mismatching passwords', () => assert400Request({
-      email: testEmail1,
+      email: testEmail,
       password: testPassword,
       verifyPassword: `${testPassword}foo`,
     }));
 
     it('should reject when email is already taken', () => assert400Request({
-      email: userFixtureNoSettings.email,
+      email: userFixture.email,
       password: testPassword,
       verifyPassword: testPassword,
     }));
@@ -161,7 +154,7 @@ describe('/users router', () => {
       .send(body);
 
     before(() => {
-      url = `/users/${userFixtureNoSettings._id}`;
+      url = `/users/${userFixture._id}`;
     });
 
     it('should respond with 401 on missing authorization credentials', done => {
@@ -216,12 +209,12 @@ describe('/users router', () => {
     });
 
     it('should update non-password fields', done => {
-      const newEmail = `aaa${userFixtureNoSettings.email}`;
+      const newEmail = `aaa${userFixture.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
         .expect(res => {
           const { body } = res;
-          expect(body._id).to.equal(userFixtureNoSettings._id);
+          expect(body._id).to.equal(userFixture._id);
           expect(body.email).to.equal(newEmail);
           expect(body.password).to.not.exist;
         })
@@ -236,7 +229,7 @@ describe('/users router', () => {
           .expect(200)
           .expect(res => {
             const { body } = res;
-            expect(body._id).to.equal(userFixtureNoSettings._id);
+            expect(body._id).to.equal(userFixture._id);
             expect(body.password).to.not.exist;
           })
           .end((err, res) => {
@@ -248,7 +241,7 @@ describe('/users router', () => {
           });
       })
         .then(() => db.collection('users')
-          .findOne({ _id: mongodb.ObjectID(userFixtureNoSettings._id) })
+          .findOne({ _id: mongodb.ObjectID(userFixture._id) })
         )
         .then(user => bcrypt.compareSync(newPassword, user.password))
         .then(isPasswordMatches => {
@@ -266,7 +259,7 @@ describe('/users router', () => {
       .send(body);
 
     before(() => {
-      url = `/users/settings/${userFixtureNoSettings._id}`;
+      url = `/users/settings/${userFixture._id}`;
     });
 
     it('should respond with 401 on missing authorization credentials', done => {
