@@ -4,27 +4,24 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 
 /**
- * Checks if a confirmation URL's email/token parameters match any email/token in database
+ * Checks if a confirmation URL's token parameters match any token in database
  * @param  {Object} req                     Request
  * @param  {Object} req.query               Request query keys and their values
- * @param  {String} req.query.email         Email
+ * @param  {String} req.query.token         Confirmation token
  * @return {Promise} Resolves with a string stating that the user has successfully
- *                   confirmed their email
+ *                   confirmed their email and is able to change their password
  */
-export default (req, res) => validate(req.query, Object.assign({},
-  { token: schemas.confirmationToken }),
+export default (req, res) => validate(req.query, { token: schemas.token },
   ['token'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
-    .findOne({
-      confirmationToken: req.query.token,
-    })
+    .findOne({ passwordResetToken: req.query.token })
   ))
   .then(user => {
     if (!user) {
       throw new Error('Invalid email confirmation link. Please try again.');
-    } else if (new Date() > user.confirmationTokenExpiry) {
+    } else if (new Date() > user.passwordResetTokenExpiry) {
       throw new Error('Email confirmation has expired, please sign up again');
     }
   })
@@ -37,6 +34,6 @@ export default (req, res) => validate(req.query, Object.assign({},
       // Check if user agent is Android and redirect to app
     } else {
       // Redirect user to our web (or mobile?) app to change password
-      res.send('Password request successfully confirmed');
+      return 'Password request successfully confirmed';
     }
   });

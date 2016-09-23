@@ -7,12 +7,11 @@ import dbManager from '../../lib/dbManager';
  * Checks if a confirmation URL's email/token parameters match any email/token in database
  * @param  {Object} req                     Request
  * @param  {Object} req.query               Request query keys and their values
- * @param  {String} req.query.email         Email
+ * @param  {String} req.query.token         Confirmation token
  * @return {Promise} Resolves with a string stating that the user has successfully
  *                   confirmed their email
  */
-export default (req, res) => validate(req.query, Object.assign({},
-  { token: schemas.confirmationToken }),
+export default (req, res) => validate(req.query, { token: schemas.token },
   ['token'])
   .then(() => (
     dbManager.getDb()
