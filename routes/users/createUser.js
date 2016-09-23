@@ -61,13 +61,9 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
             }))
             .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
             .catch((error) => {
-              console.log('error ', error);
               throw error;
             })
       ))
     ))
   ))
-  .then((status) => {
-    console.log('status ', status);
-    return status;
-  });
+  .then((status) => status);
