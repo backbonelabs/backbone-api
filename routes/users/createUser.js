@@ -60,9 +60,6 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
               confirmationTokenExpiry,
             }))
             .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
-            .catch((error) => {
-              throw error;
-            })
       ))
     ))
   ))
