@@ -4,6 +4,7 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
+import emailUtility from '../../lib/emailUtility';
 
 let app;
 let db;
@@ -251,6 +252,29 @@ describe('/auth router', () => {
       });
 
       it('should reject when email is not in request body', () => assertRequestStatusCode(400, {}));
+
+      it('should reject invalid email formats', () => {
+        const simpleWord = 'email';
+        const noAtSymbol = 'bb.com';
+        const noLocal = '@b.com';
+        const noDomain = 'b@';
+
+        return Promise.all([
+          assertRequestStatusCode(400, Object.assign({ email: simpleWord })),
+          assertRequestStatusCode(400, Object.assign({ email: noAtSymbol })),
+          assertRequestStatusCode(400, Object.assign({ email: noLocal })),
+          assertRequestStatusCode(400, Object.assign({ email: noDomain })),
+        ]);
+      });
+
+      it('should send a password reset email in less than 500ms', function (done) {
+        // Have to use anonymous function or else `this` is in the wrong context
+        this.timeout(500);
+
+        // Send a password reset email and invoke done when operation complete
+        emailUtility.sendPasswordResetEmail(testEmail1, randomString({ length: 40 }))
+          .then(() => done());
+      });
     });
   });
 });
