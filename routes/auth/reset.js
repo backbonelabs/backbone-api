@@ -13,6 +13,9 @@ import emailUtility from '../../lib/emailUtility';
  * @return {Promise} Resolves with the user object containing the updated attributes, sans password
  */
 export default req => validate(req.body, schemas.user, ['email'], ['_id'])
+  .catch(() => {
+    throw new Error('Email must be a valid email format.');
+  })
   .then(() => (
     dbManager.getDb()
     .collection('users')

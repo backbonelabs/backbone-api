@@ -232,4 +232,25 @@ describe('/auth router', () => {
     //     });
     // });
   });
+
+  describe('/auth router', () => {
+    describe('POST /reset', () => {
+      const url = '/auth/reset';
+      const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
+        request(app)
+          .post(url)
+          .send(body)
+          .expect(statusCode)
+          .end((err, res) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
+          });
+      });
+
+      it('should reject when email is not in request body', () => assertRequestStatusCode(400, {}));
+    });
+  });
 });
