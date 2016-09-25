@@ -4,7 +4,6 @@ import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
-import emailUtility from '../../lib/emailUtility';
 
 let app;
 let db;
@@ -272,8 +271,11 @@ describe('/auth router', () => {
         this.timeout(1000);
 
         // Send a password reset email and invoke done when operation complete
-        emailUtility.sendPasswordResetEmail(testEmail1, randomString({ length: 40 }))
-          .then(() => done());
+        request(app)
+          .post(url)
+          .send({ email: confirmedUserFixture.email })
+          .expect(200)
+          .end(done);
       });
     });
   });
