@@ -267,9 +267,9 @@ describe('/auth router', () => {
         ]);
       });
 
-      it('should send a password reset email in less than 500ms', function (done) {
+      it('should send a password reset email in less than 1000ms', function (done) {
         // Have to use anonymous function or else `this` is in the wrong context
-        this.timeout(500);
+        this.timeout(1000);
 
         // Send a password reset email and invoke done when operation complete
         emailUtility.sendPasswordResetEmail(testEmail1, randomString({ length: 40 }))
