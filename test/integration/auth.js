@@ -235,8 +235,8 @@ describe('/auth router', () => {
 
   describe('POST /reset', () => {
     const url = '/auth/reset';
-    const assertRequestStatusCode = (statusCode, body, callback) =>
-      new Promise((resolve, reject) => {
+    const assertRequestStatusCode = (statusCode, body, callback) => new Promise(
+      (resolve, reject) => {
         request(app)
           .post(url)
           .send(body)
@@ -251,7 +251,7 @@ describe('/auth router', () => {
               resolve(res);
             }
           });
-    });
+      });
 
     it('should reject when email is not in request body', () => assertRequestStatusCode(400, {}));
 
