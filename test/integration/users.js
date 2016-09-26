@@ -372,7 +372,14 @@ describe('/users router', () => {
       .end((err, res) => {
         callback(err, res);
       })
-  );
+    );
+
+    const assertRequest = () => (
+      request(app)
+        .get(`${url}${confirmedUserFixture.email}`)
+        .send({})
+        .expect(200)
+    );
 
     it('should fail if user is not confirmed', done => {
       assertRequestStatusCode(401, unconfirmedUserFixture.email, done);
@@ -383,12 +390,19 @@ describe('/users router', () => {
     });
 
     it('should not contain password in the returned user object', done => {
-      request(app)
-        .get(`${url}${confirmedUserFixture.email}`)
-        .send({})
-        .expect(200)
+      assertRequest()
         .expect(res => {
           expect(res.body.password).to.be.undefined;
+        })
+        .end((err, res) => {
+          done(err, res);
+        });
+    });
+
+    it('should contain an accessToken in the returned user object', done => {
+      assertRequest()
+        .expect(res => {
+          expect(res.body.accessToken).to.be.a('string');
         })
         .end((err, res) => {
           done(err, res);
