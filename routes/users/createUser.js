@@ -59,7 +59,10 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
               confirmationToken,
               confirmationTokenExpiry,
             }))
-            .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+            .then((results) => (
+              emailUtility.sendConfirmationEmail(req.body.email, confirmationToken)
+                .then(() => ({ id: results.insertedId }))
+            ))
       ))
     ))
   ));
