@@ -235,7 +235,7 @@ describe('/auth router', () => {
 
   describe('POST /reset', () => {
     const url = '/auth/reset';
-    const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
+    const assertRequestStatusCode = (statusCode, body, callback) => new Promise((resolve, reject) => {
       request(app)
         .post(url)
         .send(body)
@@ -244,6 +244,9 @@ describe('/auth router', () => {
           if (err) {
             reject(err);
           } else {
+            if (callback) {
+              callback();
+            }
             resolve(res);
           }
         });
@@ -270,11 +273,7 @@ describe('/auth router', () => {
       this.timeout(1000);
 
       // Send a password reset email and invoke done when operation complete
-      request(app)
-        .post(url)
-        .send({ email: confirmedUserFixture.email })
-        .expect(200)
-        .end(done);
+      assertRequestStatusCode(200, { email: confirmedUserFixture.email }, done);
     });
   });
 });
