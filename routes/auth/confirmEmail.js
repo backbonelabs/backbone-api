@@ -40,6 +40,6 @@ export default (req, res) => validate(req.query, { token: schemas.token },
       // Check if user agent is iOS and redirect to app URL
       res.redirect('backbone://');
     } else {
-      res.send('Email successfully confirmed');
+      return 'Email successfully confirmed';
     }
   });

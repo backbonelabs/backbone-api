@@ -9,9 +9,13 @@ import userDefaults from '../../lib/userDefaults';
 let app;
 let db;
 let userFixture = {};
+let confirmedUserFixture;
+let unconfirmedUserFixture;
 
 const { mergeWithDefaultData } = userDefaults;
-const testEmail = `test.${randomString()}@${randomString()}.com`;
+const testEmail1 = `test.${randomString()}@${randomString()}.com`;
+const testEmail2 = `test.${randomString()}@${randomString()}.com`;
+const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken = 'testAccessToken';
@@ -25,12 +29,29 @@ before(() => Promise.resolve(server)
   .then(mDb => {
     db = mDb;
   })
-  .then(() => db.collection('users').insertOne(mergeWithDefaultData({
-    email: testEmail,
-    password: testPasswordHash,
-  })))
+  .then(() => (
+    db.collection('users')
+    .insertMany([
+      mergeWithDefaultData({
+        email: testEmail1,
+        password: testPasswordHash,
+      }),
+      {
+        email: testEmail2,
+        password: testPasswordHash,
+        isConfirmed: true,
+      },
+      {
+        email: testEmail3,
+        password: testPasswordHash,
+        isConfirmed: false,
+      },
+    ])
+  ))
   .then(results => {
     userFixture = results.ops[0];
+    confirmedUserFixture = results.ops[1];
+    unconfirmedUserFixture = results.ops[2];
     userFixture._id = userFixture._id.toHexString();
     userIdsToDelete.push(userFixture._id);
   })
@@ -69,8 +90,8 @@ describe('/users router', () => {
     }));
 
     it('should reject when only one password field is in request body', () => Promise.all([
-      assert400Request({ email: testEmail, password: testPassword }),
-      assert400Request({ email: testEmail, verifyPassword: testPassword }),
+      assert400Request({ email: testEmail1, password: testPassword }),
+      assert400Request({ email: testEmail1, verifyPassword: testPassword }),
     ]));
 
     it('should reject invalid email formats', () => {
@@ -90,7 +111,7 @@ describe('/users router', () => {
 
     it('should reject invalid password formats', () => {
       /* eslint-disable max-len */
-      const email = { email: testEmail };
+      const email = { email: testEmail1 };
       const tooShort = 'fO0';
       const tooLong = 'fO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@r';
       const allLowerCase = 'melatoninislife';
@@ -114,7 +135,7 @@ describe('/users router', () => {
     });
 
     it('should reject mismatching passwords', () => assert400Request({
-      email: testEmail,
+      email: testEmail1,
       password: testPassword,
       verifyPassword: `${testPassword}foo`,
     }));
@@ -338,6 +359,40 @@ describe('/users router', () => {
           expect(body.postureThreshold).to.equal(postureThreshold);
         })
         .end(done);
+    });
+  });
+
+  describe('GET /confirm/:email', () => {
+    const url = '/users/confirm/';
+    const assertRequestStatusCode = (statusCode, email, callback) => (
+    request(app)
+      .get(`${url}${email}`)
+      .send({})
+      .expect(statusCode)
+      .end((err, res) => {
+        callback(err, res);
+      })
+  );
+
+    it('should fail if user is not confirmed', done => {
+      assertRequestStatusCode(401, unconfirmedUserFixture.email, done);
+    });
+
+    it('should pass if user is confirmed', done => {
+      assertRequestStatusCode(200, confirmedUserFixture.email, done);
+    });
+
+    it('should not contain password in the returned user object', done => {
+      request(app)
+        .get(`${url}${confirmedUserFixture.email}`)
+        .send({})
+        .expect(200)
+        .expect(res => {
+          expect(res.body.password).to.be.undefined;
+        })
+        .end((err, res) => {
+          done(err, res);
+        });
     });
   });
 });
