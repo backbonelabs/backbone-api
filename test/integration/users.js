@@ -138,6 +138,7 @@ describe('/users router', () => {
         .expect(200)
         .expect(res => {
           expect(res.body).to.be.ok;
+          expect(res.body.id).to.be.a('string');
         })
         .end((err, res) => {
           userIdsToDelete.push(res.body.id);
