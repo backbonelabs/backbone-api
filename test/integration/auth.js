@@ -233,50 +233,48 @@ describe('/auth router', () => {
     // });
   });
 
-  describe('/auth router', () => {
-    describe('POST /reset', () => {
-      const url = '/auth/reset';
-      const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
-        request(app)
-          .post(url)
-          .send(body)
-          .expect(statusCode)
-          .end((err, res) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(res);
-            }
-          });
-      });
+  describe('POST /reset', () => {
+    const url = '/auth/reset';
+    const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
+      request(app)
+        .post(url)
+        .send(body)
+        .expect(statusCode)
+        .end((err, res) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        });
+    });
 
-      it('should reject when email is not in request body', () => assertRequestStatusCode(400, {}));
+    it('should reject when email is not in request body', () => assertRequestStatusCode(400, {}));
 
-      it('should reject invalid email formats', () => {
-        const simpleWord = 'email';
-        const noAtSymbol = 'bb.com';
-        const noLocal = '@b.com';
-        const noDomain = 'b@';
+    it('should reject invalid email formats', () => {
+      const simpleWord = 'email';
+      const noAtSymbol = 'bb.com';
+      const noLocal = '@b.com';
+      const noDomain = 'b@';
 
-        return Promise.all([
-          assertRequestStatusCode(400, Object.assign({ email: simpleWord })),
-          assertRequestStatusCode(400, Object.assign({ email: noAtSymbol })),
-          assertRequestStatusCode(400, Object.assign({ email: noLocal })),
-          assertRequestStatusCode(400, Object.assign({ email: noDomain })),
-        ]);
-      });
+      return Promise.all([
+        assertRequestStatusCode(400, { email: simpleWord }),
+        assertRequestStatusCode(400, { email: noAtSymbol }),
+        assertRequestStatusCode(400, { email: noLocal }),
+        assertRequestStatusCode(400, { email: noDomain }),
+      ]);
+    });
 
-      it('should send a password reset email in less than 1000ms', function (done) {
-        // Have to use anonymous function or else `this` is in the wrong context
-        this.timeout(1000);
+    it('should send a password reset email in less than 1000ms', function (done) {
+      // Have to use anonymous function or else `this` is in the wrong context
+      this.timeout(1000);
 
-        // Send a password reset email and invoke done when operation complete
-        request(app)
-          .post(url)
-          .send({ email: confirmedUserFixture.email })
-          .expect(200)
-          .end(done);
-      });
+      // Send a password reset email and invoke done when operation complete
+      request(app)
+        .post(url)
+        .send({ email: confirmedUserFixture.email })
+        .expect(200)
+        .end(done);
     });
   });
 });
