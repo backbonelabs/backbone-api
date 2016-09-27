@@ -13,10 +13,8 @@ import sanitizeUser from '../../lib/sanitizeUser';
  * @param  {Object} req.body                Request body
  * @param  {String} req.body.email          Email
  * @param  {String} req.body.password       Password
- * @param  {String} req.body.verifyPassword Password
- * @return {Promise} Resolves with an object containing the user email, rejects if
- *                   both passwords do not match or the email address is being used
- *                   by another user
+ * @return {Promise} Resolves with the user object without their password, rejects if
+ *                   the email address is already registered to another user.
  */
 export default req => validate(req.body, {
   email: schemas.user.email,
@@ -40,7 +38,7 @@ export default req => validate(req.body, {
       }
     })
     .then(hash => (
-      // Generate a token and token expiry
+      // Generate an accessToken
       tokenFactory.createAccessToken()
         .then(accessToken => (
           dbManager.getDb()
@@ -54,10 +52,11 @@ export default req => validate(req.body, {
             .then((result) => {
               const { ops: user, insertedId: userId } = result;
 
+              // Store accessToken along with userId
               return dbManager.getDb()
-              .collection('accessTokens')
-              .insertOne({ userId, accessToken })
-              .then(() => sanitizeUser(user[0]));
+                .collection('accessTokens')
+                .insertOne({ userId, accessToken })
+                .then(() => sanitizeUser(user[0]));
             })
       ))
     ))
