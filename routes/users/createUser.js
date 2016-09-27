@@ -20,17 +20,10 @@ import userDefaults from '../../lib/userDefaults';
  */
 export default req => validate(req.body, Object.assign({}, schemas.user, {
   password: schemas.password,
-  verifyPassword: schemas.password,
-}), ['email', 'password', 'verifyPassword'], ['_id'])
+}), ['email', 'password'], ['_id'])
   .catch(() => {
     throw new Error('Email must be a valid email format. Password must be at least 8 characters ' +
       'and contain at least one number.');
-  })
-  .then(() => {
-    // Make sure password and verifyPassword are the same
-    if (req.body.password !== req.body.verifyPassword) {
-      throw new Error('Passwords must match');
-    }
   })
   .then(() => (
     // Check if there is already a user with the email
