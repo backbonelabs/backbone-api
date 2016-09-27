@@ -18,9 +18,10 @@ import sanitizeUser from '../../lib/sanitizeUser';
  *                   both passwords do not match or the email address is being used
  *                   by another user
  */
-export default req => validate(req.body, Object.assign({}, schemas.user, {
+export default req => validate(req.body, {
+  email: schemas.user.email,
   password: schemas.password,
-}), ['email', 'password'], ['_id'])
+}, ['email', 'password'], ['_id'])
   .catch(() => {
     throw new Error('Email must be a valid email format. Password must be at least 8 characters');
   })
