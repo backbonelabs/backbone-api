@@ -50,7 +50,14 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
               createdAt: new Date(),
               accessToken,
             }))
-            .then(result => sanitizeUser(result.ops[0]))
+            .then((result) => {
+              const { ops: user, insertedId: userId } = result;
+
+              return dbManager.getDb()
+              .collection('accessTokens')
+              .insertOne({ userId, accessToken })
+              .then(() => sanitizeUser(user[0]));
+            })
       ))
     ))
   ));

@@ -11,21 +11,18 @@ import dbManager from '../../lib/dbManager';
  * @return {Promise} Resolves with a string stating that the user has successfully
  *                   confirmed their email
  */
-export default (req, res) => validate(req.query, Object.assign({},
-  { token: schemas.confirmationToken }),
-  ['token'])
+export default (req, res) => validate(req.query, { token: schemas.confirmationToken }, ['token'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
-    .findOne({
-      confirmationToken: req.query.token,
-    })
+    .findOne({ confirmationToken: req.query.token })
   ))
   .then(user => {
-    // Create a date object and set to two days ago
+    const today = new Date();
+
     if (!user) {
       throw new Error('Invalid confirmation link. Please try again.');
-    } else if (new Date() > user.confirmationTokenExpiry) {
+    } else if (today > user.confirmationTokenExpiry) {
       throw new Error('Email confirmation has expired, please sign up again');
     } else {
       return dbManager.getDb()
