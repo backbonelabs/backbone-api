@@ -142,20 +142,6 @@ describe('/auth router', () => {
     //     });
     // });
 
-    it('should reject on unconfirmed email/password combination', done => {
-      request(app)
-        .post(url)
-        .send({
-          email: unconfirmedUserFixture.email,
-          password: testPassword,
-        })
-        .expect(401)
-        .expect(res => {
-          expect(res.body).to.contain.all.keys(['error']);
-        })
-        .end(done);
-    });
-
     it('should return user profile and access token on valid email/password combination', done => {
       request(app)
         .post(url)
