@@ -49,16 +49,16 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       return dbManager.getDb()
       .collection('users')
       .findOne({ email })
-      .then(result => {
-        if (result) {
+      .then(user => {
+        if (user) {
           throw new Error('Email already taken');
         }
         return tokenFactory.createConfirmationToken()
           .then(([confirmationToken, confirmationTokenExpiry]) =>
             Object.assign(body, { confirmationToken, confirmationTokenExpiry })
           )
-          .then(() => emailUtility.sendConfirmationEmail(email, body.confirmationToken)
-          .then(() => body));
+          .then(() => emailUtility.sendConfirmationEmail(email, body.confirmationToken))
+          .then(() => Object.assign(body, { isConfirmed: false }));
       });
     }
     return body;
@@ -73,12 +73,12 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         { returnOriginal: false }
       )
   ))
-  .then(result => {
-    if (!result.value) {
+  .then(user => {
+    if (!user.value) {
       // User ID doesn't exist
       throw new Error('Invalid user');
     }
 
     // Return updated user
-    return sanitizeUser(result.value);
+    return sanitizeUser(user.value);
   });

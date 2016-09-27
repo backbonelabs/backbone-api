@@ -1,5 +1,4 @@
 import dbManager from '../../lib/dbManager';
-import tokenFactory from '../../lib/tokenFactory';
 import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
@@ -10,34 +9,19 @@ import sanitizeUser from '../../lib/sanitizeUser';
  * @param  {Object} res              Response
  * @return {Promise} Resolves with a boolean indicating whether the user is confirmed or not
  */
-export default (req, res) => {
-  const email = req.params.email;
-  return dbManager.getDb()
+export default (req, res) => (
+  dbManager.getDb()
     .collection('users')
-    .findOne({ email })
+    .findOne({ email: req.params.email })
     .then(user => {
-      if (user && !user.isConfirmed) {
+      if (!user) {
+        throw new Error('This user does not exist.');
+      } else if (user && !user.isConfirmed) {
         res.status(401);
         throw new Error('User has not confirmed email.');
-      } else if (user && user.isConfirmed) {
-        const { _id: userId } = user;
-
-        return tokenFactory.createAccessToken(userId)
-          .then(accessToken => (
-            dbManager.getDb()
-              .collection('accessTokens')
-              .insertOne({ userId, accessToken })
-              .then(() => [user, accessToken])
-          ));
       } else {
-        // TODO: Stop app from scanning, since user doesn't exist
-        throw new Error('This user does not exist.');
+        return user;
       }
     })
-    .then(([user, accessToken]) => {
-      // Return sanitized user object with access token
-      const userResult = sanitizeUser(user);
-      userResult.accessToken = accessToken;
-      return userResult;
-    });
-};
+    .then(user => sanitizeUser(user))
+);
