@@ -3,8 +3,8 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
-import emailUtility from '../../lib/emailUtility';
 import userDefaults from '../../lib/userDefaults';
+import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -22,8 +22,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
   password: schemas.password,
 }), ['email', 'password'], ['_id'])
   .catch(() => {
-    throw new Error('Email must be a valid email format. Password must be at least 8 characters ' +
-      'and contain at least one number.');
+    throw new Error('Email must be a valid email format. Password must be at least 8 characters');
   })
   .then(() => (
     // Check if there is already a user with the email
@@ -41,19 +40,17 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     })
     .then(hash => (
       // Generate a token and token expiry
-      tokenFactory.createConfirmationToken()
-        .then(([confirmationToken, confirmationTokenExpiry]) => (
+      tokenFactory.createAccessToken()
+        .then(accessToken => (
           dbManager.getDb()
             .collection('users')
             .insertOne(userDefaults.mergeWithDefaultData({
               email: req.body.email,
               password: hash,
               createdAt: new Date(),
-              confirmationToken,
-              confirmationTokenExpiry,
+              accessToken,
             }))
-            .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+            .then(result => sanitizeUser(result.ops[0]))
       ))
     ))
-  ))
-  .then(() => (true));
+  ));
