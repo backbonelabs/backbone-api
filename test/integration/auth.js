@@ -379,5 +379,9 @@ describe('/auth router', () => {
     it('should allow reset on valid and nonexpired token', (done) => {
       assertRequestStatusCode(200, validTokenUserFixture.passwordResetToken, done);
     });
+
+    it('should reject when trying to reset with a previously used token', (done) => {
+      assertRequestStatusCode(400, validTokenUserFixture.passwordResetToken, done);
+    });
   });
 });
