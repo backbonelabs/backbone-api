@@ -4,10 +4,12 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 
 /**
- * Checks if a confirmation URL's email/token parameters match any email/token in database
+ * Checks if a confirmation URL's token parameter matches a user document in database
+ * If a user is found and token is still valid, update user isConfirmed property to
+ * reflect that user's email is confirmed
  * @param  {Object} req                     Request
  * @param  {Object} req.query               Request query keys and their values
- * @param  {String} req.query.token         Confirmation token
+ * @param  {String} req.query.token         Email confirmation token
  * @return {Promise} Resolves with a string stating that the user has successfully
  *                   confirmed their email
  */
@@ -22,9 +24,9 @@ export default (req, res) => validate(req.query, { token: schemas.token },
   ))
   .then(user => {
     if (!user) {
-      throw new Error('Invalid email confirmation link. Please try again.');
+      throw new Error('Invalid email confirmation request');
     } else if (new Date() > user.confirmationTokenExpiry) {
-      throw new Error('Email confirmation has expired, please sign up again');
+      throw new Error('Invalid email confirmation request');
     } else {
       return dbManager.getDb()
       .collection('users')
