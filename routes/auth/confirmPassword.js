@@ -4,25 +4,36 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 
 /**
- * Checks if a confirmation URL's token parameters match any token in database
- * @param  {Object} req                     Request
- * @param  {Object} req.query               Request query keys and their values
- * @param  {String} req.query.token         Confirmation token
- * @return {Promise} Resolves with a string stating that the user has successfully
- *                   confirmed their email and is able to change their password
+ * Checks if a password reset URL's token parameter matches a user document in database.
+ * If a user is found and token is still valid, redirect user to update their password.
+ * @param  {Object} req              Request
+ * @param  {Object} req.query        Request query keys and their values
+ * @param  {String} req.query.token  Password reset token
+ * @return {Promise}                 Redirects user to a page where the user can change
+ *                                   their password.
  */
 export default (req, res) => validate(req.query, { token: schemas.token },
   ['token'])
   .then(() => (
     dbManager.getDb()
-    .collection('users')
-    .findOne({ passwordResetToken: req.query.token })
+      .collection('users')
+      .findOne({ passwordResetToken: req.query.token })
   ))
   .then(user => {
     if (!user) {
-      throw new Error('Invalid email confirmation link. Please try again.');
+      throw new Error('Invalid password reset request');
     } else if (new Date() > user.passwordResetTokenExpiry) {
-      throw new Error('Email confirmation has expired, please sign up again');
+      throw new Error('Invalid password reset request');
+    } else {
+      const { passwordResetToken, passwordResetTokenExpiry } = user;
+
+      // Update the user profile by removing the passwordResetToken/Expiry properties
+      return dbManager.getDb()
+        .collection('users')
+        .findOneAndUpdate(
+          { _id: user._id },
+          { $unset: { passwordResetToken, passwordResetTokenExpiry } }
+        );
     }
   })
   .then(() => {
