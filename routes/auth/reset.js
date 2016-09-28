@@ -5,12 +5,15 @@ import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
 
 /**
- * Updates a user
- * @param  {Object} req              Request
- * @param  {String} req.params.id    User ID
- * @param  {Object} req.body         Key-value pairs of user attributes to update
- * @param  {String} req.body.email   Email
- * @return {Promise} Resolves with the user object containing the updated attributes, sans password
+ * Handles a user-initiated password reset request. Generates a token for the password reset
+ * request, as well as the expiration date for the token and sends the user an email.
+ * @param  {Object} req                      Request
+ * @param  {String} req.body.email           Email
+ * @param  {String} passwordResetToken       Token for confirming a user's password reset request
+ * @param  {Object} passwordResetTokenExpiry A date two days into the future from when the token
+ *                                           was created, in order to check whether it has expired
+ *                                           (48 hour expiration period).
+ * @return {Promise}                         Resolves with undefined on successful email send
  */
 export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .catch(() => {
@@ -24,8 +27,8 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .then((user) => {
     if (!user) {
       // For security purposes, we probably shouldn't expose whether a user exists or not
-    } else if (user && user.isConfirmed) {
-      // User exists and has previously confirmed their email already, send a password reset email
+    } else {
+      // Generate a passwordResetToken/Expiry and send a password reset confirmation email
       return tokenFactory.generateToken()
         .then(([passwordResetToken, passwordResetTokenExpiry]) => (
           dbManager.getDb()
