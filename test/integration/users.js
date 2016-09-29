@@ -49,9 +49,10 @@ before(() => Promise.resolve(server)
     ])
   ))
   .then(results => {
-    userFixture = results.ops[0];
-    confirmedUserFixture = results.ops[1];
-    unconfirmedUserFixture = results.ops[2];
+    const { ops } = results;
+    userFixture = ops[0];
+    confirmedUserFixture = ops[1];
+    unconfirmedUserFixture = ops[2];
     userFixture._id = userFixture._id.toHexString();
     userIdsToDelete.push(userFixture._id);
   })
@@ -62,7 +63,11 @@ after(() => db.collection('accessTokens')
   .deleteOne({ accessToken: testAccessToken })
   .then(() => db.collection('users').deleteMany({
     _id: {
-      $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
+      $in: [
+        userIdsToDelete.map(id => mongodb.ObjectID(id)),
+        mongodb.ObjectID(unconfirmedUserFixture._id),
+        mongodb.ObjectID(confirmedUserFixture._id),
+      ],
     },
   }))
 );
@@ -146,8 +151,8 @@ describe('/users router', () => {
       verifyPassword: testPassword,
     }));
 
-    it('should create a new user and send an email within 1000ms', function (done) {
-      this.timeout(1000);
+    it('should create a new user and send an email within 5000ms', function (done) {
+      this.timeout(5000);
 
       request(app)
         .post(url)
@@ -364,15 +369,19 @@ describe('/users router', () => {
 
   describe('GET /confirm/:email', () => {
     const url = '/users/confirm/';
-    const assertRequestStatusCode = (statusCode, email, callback) => (
+    const assertRequestStatusCode = (statusCode, email) => new Promise((resolve, reject) => (
     request(app)
       .get(`${url}${email}`)
       .send({})
       .expect(statusCode)
       .end((err, res) => {
-        callback(err, res);
+        if (err) {
+          reject(err);
+        } else {
+          resolve(res);
+        }
       })
-    );
+    ));
 
     const assertRequest = () => (
       request(app)
@@ -381,32 +390,28 @@ describe('/users router', () => {
         .expect(200)
     );
 
-    it('should fail if user is not confirmed', done => {
-      assertRequestStatusCode(401, unconfirmedUserFixture.email, done);
-    });
+    it('should fail if user is not confirmed', () => (
+      assertRequestStatusCode(401, unconfirmedUserFixture.email)
+    ));
 
-    it('should pass if user is confirmed', done => {
-      assertRequestStatusCode(200, confirmedUserFixture.email, done);
-    });
+    it('should pass if user is confirmed', () => (
+      assertRequestStatusCode(200, confirmedUserFixture.email)
+    ));
 
     it('should not contain password in the returned user object', done => {
       assertRequest()
-        .expect(res => {
-          expect(res.body.password).to.be.undefined;
-        })
-        .end((err, res) => {
-          done(err, res);
-        });
+        .expect(res => (
+          expect(res.body.password).to.be.undefined
+        ))
+        .end(done);
     });
 
     it('should contain an accessToken in the returned user object', done => {
       assertRequest()
-        .expect(res => {
-          expect(res.body.accessToken).to.be.a('string');
-        })
-        .end((err, res) => {
-          done(err, res);
-        });
+        .expect(res => (
+          expect(res.body.accessToken).to.be.a('string')
+        ))
+        .end(done);
     });
   });
 });

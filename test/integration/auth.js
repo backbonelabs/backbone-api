@@ -65,10 +65,13 @@ before(() => Promise.resolve(server)
     })
   )
   .then(results => {
-    const ops = results.ops.map(op => ({
-      ...op,
-      _id: op._id.toHexString(),
-    }));
+    const { ops } = results;
+
+    // QUESTION: Do we need this? Tests pass
+    // const ops = results.ops.map(op => ({
+    //   ...op,
+    //   _id: op._id.toHexString(),
+    // }));
     unconfirmedUserFixture = ops[0];
     confirmedUserFixture = ops[1];
     validTokenUserFixture = ops[2];
@@ -95,6 +98,8 @@ after(() => db.collection('accessTokens')
         $in: [
           mongodb.ObjectID(unconfirmedUserFixture._id),
           mongodb.ObjectID(confirmedUserFixture._id),
+          mongodb.ObjectID(validTokenUserFixture._id),
+          mongodb.ObjectID(invalidTokenUserFixture._id),
         ],
       },
     })
@@ -301,9 +306,9 @@ describe('/auth router', () => {
       ]);
     });
 
-    it('should send a password reset email in less than 1000ms', function (done) {
+    it('should send a password reset email in less than 5000ms', function (done) {
       // Have to use anonymous function or else `this` is in the wrong context
-      this.timeout(1000);
+      this.timeout(5000);
 
       // Send a password reset email and invoke done when operation complete
       assertRequestStatusCode(200, { email: confirmedUserFixture.email }, done);
@@ -313,31 +318,35 @@ describe('/auth router', () => {
   describe('GET /confirm/email', () => {
     const url = '/auth/confirm/email?token=';
 
-    const assertRequestStatusCode = (statusCode, token, callback) => (
+    const assertRequestStatusCode = (statusCode, token) => new Promise((resolve, reject) => (
         request(app)
           .get(`${url}${token}`)
           .send({})
           .expect(statusCode)
           .end((err, res) => {
-            callback(err, res);
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
           })
-      );
+      ));
 
-    it('should reject when token is not in request query', (done) => {
-      assertRequestStatusCode(400, '', done);
-    });
+    it('should reject when token is not in request query', () => (
+      assertRequestStatusCode(400, '')
+    ));
 
-    it('should reject when token is incorrect', (done) => {
-      assertRequestStatusCode(400, `${validTokenUserFixture.confirmationToken}123`, done);
-    });
+    it('should reject when token is incorrect', () => (
+      assertRequestStatusCode(400, `${validTokenUserFixture.confirmationToken}123`)
+    ));
 
-    it('should reject when token is expired', (done) => {
-      assertRequestStatusCode(400, invalidTokenUserFixture.confirmationToken, done);
-    });
+    it('should reject when token is expired', () => (
+      assertRequestStatusCode(400, invalidTokenUserFixture.confirmationToken)
+    ));
 
-    it('should confirm email on valid and nonexpired token', (done) => {
-      assertRequestStatusCode(200, validTokenUserFixture.confirmationToken, done);
-    });
+    it('should confirm email on valid and nonexpired token', () => (
+      assertRequestStatusCode(200, validTokenUserFixture.confirmationToken)
+    ));
 
     it('should update isConfirmed to true and set accessToken upon confirmation', (done) => {
       request(app)
@@ -347,41 +356,45 @@ describe('/auth router', () => {
           expect(res.body.isConfirmed).to.be.true;
           expect(res.body.accessToken).to.not.be.undefined;
         })
-        .end((err, res) => done(err, res));
+        .end(done);
     });
   });
 
   describe('GET /confirm/password', () => {
     const url = '/auth/confirm/password?token=';
 
-    const assertRequestStatusCode = (statusCode, token, callback) => (
+    const assertRequestStatusCode = (statusCode, token) => new Promise((resolve, reject) => (
         request(app)
           .get(`${url}${token}`)
           .send({})
           .expect(statusCode)
           .end((err, res) => {
-            callback(err, res);
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
           })
-      );
+      ));
 
-    it('should reject when token is not in request query', (done) => {
-      assertRequestStatusCode(400, '', done);
-    });
+    it('should reject when token is not in request query', () => (
+      assertRequestStatusCode(400, '')
+    ));
 
-    it('should reject when token is incorrect', (done) => {
-      assertRequestStatusCode(400, `${validTokenUserFixture.passwordResetToken}123`, done);
-    });
+    it('should reject when token is incorrect', () => (
+      assertRequestStatusCode(400, `${validTokenUserFixture.passwordResetToken}123`)
+    ));
 
-    it('should reject when token is expired', (done) => {
-      assertRequestStatusCode(400, invalidTokenUserFixture.passwordResetToken, done);
-    });
+    it('should reject when token is expired', () => (
+      assertRequestStatusCode(400, invalidTokenUserFixture.passwordResetToken)
+    ));
 
-    it('should allow reset on valid and nonexpired token', (done) => {
-      assertRequestStatusCode(200, validTokenUserFixture.passwordResetToken, done);
-    });
+    it('should allow reset on valid and nonexpired token', () => (
+      assertRequestStatusCode(200, validTokenUserFixture.passwordResetToken)
+    ));
 
-    it('should reject when trying to reset with a previously used token', (done) => {
-      assertRequestStatusCode(400, validTokenUserFixture.passwordResetToken, done);
-    });
+    it('should reject when trying to reset with a previously used token', () => (
+      assertRequestStatusCode(400, validTokenUserFixture.passwordResetToken)
+    ));
   });
 });
