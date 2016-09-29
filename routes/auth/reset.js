@@ -5,15 +5,14 @@ import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
 
 /**
- * Handles a user-initiated password reset request. Generates a token for the password reset
- * request, as well as the expiration date for the token and sends the user an email.
+ * Finds a user by their email and generates a password reset token and the date which
+ * it expires. Send user email with link containing token for confirming reset request.
  * @param  {Object} req                      Request
  * @param  {String} req.body.email           Email
- * @param  {String} passwordResetToken       Token for confirming a user's password reset request
- * @param  {Object} passwordResetTokenExpiry A date two days into the future from when the token
+ *         {String} passwordResetToken       Token for confirming a user's password reset request
+ *         {Object} passwordResetTokenExpiry A date two days into the future from when the token
  *                                           was created, in order to check whether it has expired
- *                                           (48 hour expiration period).
- * @return {Promise}                         Resolves with undefined on successful email send
+ * @return {Promise}                         Resolves with undefined on a successful email send
  */
 export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .catch(() => {
