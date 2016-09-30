@@ -1,5 +1,4 @@
 import dbManager from '../../lib/dbManager';
-import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
  * Checks if a user has confirmed their email
@@ -7,7 +6,8 @@ import sanitizeUser from '../../lib/sanitizeUser';
  * @param  {Object} req.params       Request parameters
  * @param  {String} req.params.email User's email address
  * @param  {Object} res              Response
- * @return {Promise} Resolves with the user object sans password
+ * @return {Promise} Resolves with an object containing boolean property stating
+ *                   whether a user has confirmed their email.
  */
 export default (req, res) => (
   dbManager.getDb()
@@ -15,13 +15,11 @@ export default (req, res) => (
     .findOne({ email: req.params.email })
     .then(user => {
       if (!user) {
+        res.status(400);
         throw new Error('This user does not exist.');
-      } else if (user && !user.isConfirmed) {
-        res.status(401);
-        throw new Error('User has not confirmed email.');
-      } else {
-        return user;
+      } else if (!user.isConfirmed) {
+        return { isConfirmed: false };
       }
+      return { isConfirmed: true };
     })
-    .then(user => sanitizeUser(user))
 );
