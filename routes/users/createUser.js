@@ -13,13 +13,13 @@ import sanitizeUser from '../../lib/sanitizeUser';
  * @param  {Object} req.body                Request body
  * @param  {String} req.body.email          Email
  * @param  {String} req.body.password       Password
- * @return {Promise} Resolves with the user object without their password, rejects if
- *                   the email address is already registered to another user.
+ * @return {Promise} Resolves with an object containing user details sans password
+ *                   and user's current assigned accessToken.
  */
 export default req => validate(req.body, {
   email: schemas.user.email,
   password: schemas.password,
-}, ['email', 'password'], ['_id'])
+}, ['email', 'password'])
   .catch(() => {
     throw new Error('Email must be a valid email format. Password must be at least 8 characters');
   })
@@ -47,17 +47,23 @@ export default req => validate(req.body, {
               email: req.body.email,
               password: hash,
               createdAt: new Date(),
-              accessToken,
-            }))
-            .then((result) => {
-              const { ops: user, insertedId: userId } = result;
-
-              // Store accessToken along with userId
-              return dbManager.getDb()
-                .collection('accessTokens')
-                .insertOne({ userId, accessToken })
-                .then(() => sanitizeUser(user[0]));
             })
-      ))
+            .then(result => [result, accessToken])
+          )
+        ))
+        .then(([result, accessToken]) => {
+          const { ops, insertedId: userId } = result;
+
+          // Store accessToken along with userId
+          return dbManager.getDb()
+            .collection('accessTokens')
+            .insertOne({ userId, accessToken })
+            .then(() => (
+              {
+                user: sanitizeUser(ops[0]),
+                accessToken,
+              }
+            ));
+        })
     ))
   ));
