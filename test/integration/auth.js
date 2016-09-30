@@ -271,7 +271,7 @@ describe('/auth router', () => {
 
   describe('POST /reset', () => {
     const url = '/auth/reset';
-    const assertRequestStatusCode = (statusCode, body, callback) => new Promise(
+    const assertRequestStatusCode = (statusCode, body) => new Promise(
       (resolve, reject) => {
         request(app)
           .post(url)
@@ -286,7 +286,6 @@ describe('/auth router', () => {
             } else {
               resolve(res);
             }
-            callback && callback(err, res);
           });
       });
 
@@ -306,12 +305,12 @@ describe('/auth router', () => {
       ]);
     });
 
-    it('should send a password reset email in less than 5000ms', function (done) {
+    it('should send a password reset email in less than 5000ms', function () {
       // Have to use anonymous function or else `this` is in the wrong context
       this.timeout(5000);
 
       // Send a password reset email and invoke done when operation complete
-      assertRequestStatusCode(200, { email: confirmedUserFixture.email }, done);
+      return assertRequestStatusCode(200, { email: confirmedUserFixture.email });
     });
   });
 
