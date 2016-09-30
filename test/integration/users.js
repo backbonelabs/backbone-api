@@ -53,8 +53,11 @@ before(() => Promise.resolve(server)
     userFixture = ops[0];
     confirmedUserFixture = ops[1];
     unconfirmedUserFixture = ops[2];
-    userFixture._id = userFixture._id.toHexString();
-    userIdsToDelete.push(userFixture._id);
+
+    [userFixture, confirmedUserFixture, unconfirmedUserFixture].map(value => {
+      value._id = value._id.toHexString();
+      userIdsToDelete.push(value._id);
+    });
   })
   .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
 );
@@ -63,11 +66,7 @@ after(() => db.collection('accessTokens')
   .deleteOne({ accessToken: testAccessToken })
   .then(() => db.collection('users').deleteMany({
     _id: {
-      $in: [
-        userIdsToDelete.map(id => mongodb.ObjectID(id)),
-        mongodb.ObjectID(unconfirmedUserFixture._id),
-        mongodb.ObjectID(confirmedUserFixture._id),
-      ],
+      $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
     },
   }))
 );
