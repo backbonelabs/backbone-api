@@ -9,6 +9,5 @@ module.exports = {
     'no-underscore-dangle': 0,
     'no-unused-expressions': 0,
     'no-param-reassign': 0,
-    'array-callback-return': 0,
   }
 };

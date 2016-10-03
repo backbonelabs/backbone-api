@@ -54,7 +54,7 @@ before(() => Promise.resolve(server)
     confirmedUserFixture = ops[1];
     unconfirmedUserFixture = ops[2];
 
-    [userFixture, confirmedUserFixture, unconfirmedUserFixture].map(value => {
+    [userFixture, confirmedUserFixture, unconfirmedUserFixture].forEach(value => {
       value._id = value._id.toHexString();
       userIdsToDelete.push(value._id);
     });
