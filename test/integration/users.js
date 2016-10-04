@@ -65,16 +65,10 @@ describe('/users router', () => {
 
     it('should reject when email is not in request body', () => assert400Request({
       password: testPassword,
-      verifyPassword: testPassword,
     }));
 
-    it('should reject when only one password field is in request body', () => Promise.all([
-      assert400Request({ email: testEmail, password: testPassword }),
-      assert400Request({ email: testEmail, verifyPassword: testPassword }),
-    ]));
-
     it('should reject invalid email formats', () => {
-      const passwords = { password: testPassword, verifyPassword: testPassword };
+      const passwords = { password: testPassword };
       const simpleWord = 'email';
       const noAtSymbol = 'bb.com';
       const noLocal = '@b.com';
@@ -90,59 +84,42 @@ describe('/users router', () => {
 
     it('should reject invalid password formats', () => {
       /* eslint-disable max-len */
-      const email = { email: testEmail };
       const tooShort = 'fO0';
       const tooLong = 'fO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@r';
-      const allLowerCase = 'melatoninislife';
-      const allUpperCase = 'MELATONINISLIFE';
-      const allNumbers = '1234567890';
-      const missingUpperCase = 'melatoninislife1';
-      const missingLowerCase = 'MELATONINISLIFE1';
-      const missingNumber = 'MelatoninIsLife';
 
       return Promise.all([
-        assert400Request(Object.assign({ password: tooShort, verifyPassword: tooShort }, email)),
-        assert400Request(Object.assign({ password: tooLong, verifyPassword: tooLong }, email)),
-        assert400Request(Object.assign({ password: allLowerCase, verifyPassword: allLowerCase }, email)),
-        assert400Request(Object.assign({ password: allUpperCase, verifyPassword: allUpperCase }, email)),
-        assert400Request(Object.assign({ password: allNumbers, verifyPassword: allNumbers }, email)),
-        assert400Request(Object.assign({ password: missingUpperCase, verifyPassword: missingUpperCase }, email)),
-        assert400Request(Object.assign({ password: missingLowerCase, verifyPassword: missingLowerCase }, email)),
-        assert400Request(Object.assign({ password: missingNumber, verifyPassword: missingNumber }, email)),
+        assert400Request(Object.assign({}, { password: tooShort }, { email: `test.${randomString()}@${randomString()}.com` })),
+        assert400Request(Object.assign({}, { password: tooLong }, { email: `test.${randomString()}@${randomString()}.com` })),
       ]);
       /* eslint-enable max-len */
     });
 
-    it('should reject mismatching passwords', () => assert400Request({
-      email: testEmail,
-      password: testPassword,
-      verifyPassword: `${testPassword}foo`,
-    }));
-
     it('should reject when email is already taken', () => assert400Request({
       email: userFixture.email,
       password: testPassword,
-      verifyPassword: testPassword,
     }));
 
-    // TODO: Re-write test to take into account email operation time
-    // it('should create a new user', done => {
-    //   request(app)
-    //     .post(url)
-    //     .send({
-    //       email: `test.${randomString()}@${randomString()}.com`,
-    //       password: testPassword,
-    //       verifyPassword: testPassword,
-    //     })
-    //     .expect(200)
-    //     .expect(res => {
-    //       expect(res.body).to.be.ok;
-    //     })
-    //     .end((err, res) => {
-    //       userIdsToDelete.push(res.body.id);
-    //       done(err, res);
-    //     });
-    // });
+    it('should create a new user', done => {
+      request(app)
+        .post(url)
+        .send({
+          email: `test.${randomString()}@${randomString()}.com`,
+          password: testPassword,
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.be.ok;
+          expect(res.body).to.have.all.keys('user', 'accessToken');
+          expect(res.body.user).to.have.all.keys(
+            'settings', 'firstName', 'lastName', 'isConfirmed', 'email', 'createdAt', '_id'
+          );
+          expect(res.body.accessToken).to.be.a('string');
+        })
+        .end((err, res) => {
+          userIdsToDelete.push(res.body.user._id);
+          done(err, res);
+        });
+    });
   });
 
   describe('GET /:id', () => {
@@ -226,16 +203,6 @@ describe('/users router', () => {
       assertRequest({ _id: 'abc123' })
         .expect(400)
         .expect({ error: 'child "_id" fails because ["_id" is not allowed]' })
-        .end(done);
-    });
-
-    it('should not allow mismatching password fields', done => {
-      assertRequest({
-        password: testPassword,
-        verifyPassword: `${testPassword}1`,
-      })
-        .expect(400)
-        .expect({ error: 'Passwords must match' })
         .end(done);
     });
 
