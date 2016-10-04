@@ -21,7 +21,9 @@ export default req => validate(req.body, {
   password: schemas.password,
 }, ['email', 'password'])
   .catch(() => {
-    throw new Error('Email must be a valid email format. Password must be at least 8 characters');
+    throw new Error(
+      'Email must be a valid email format, and password must be at least 8 characters'
+    );
   })
   .then(() => (
     // Check if there is already a user with the email
@@ -47,10 +49,10 @@ export default req => validate(req.body, {
               email: req.body.email,
               password: hash,
               createdAt: new Date(),
-            })
+            }))
             .then(result => [result, accessToken])
-          )
-        ))
+          ))
+        )
         .then(([result, accessToken]) => {
           const { ops, insertedId: userId } = result;
 
@@ -66,4 +68,4 @@ export default req => validate(req.body, {
             ));
         })
     ))
-  ));
+  );
