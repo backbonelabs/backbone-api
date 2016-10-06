@@ -84,12 +84,13 @@ describe('/users router', () => {
 
     it('should reject invalid password formats', () => {
       /* eslint-disable max-len */
+      const staticEmail = { email: `test.${randomString()}@${randomString()}.com` };
       const tooShort = 'fO0';
       const tooLong = 'fO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@r';
 
       return Promise.all([
-        assert400Request(Object.assign({}, { password: tooShort }, { email: `test.${randomString()}@${randomString()}.com` })),
-        assert400Request(Object.assign({}, { password: tooLong }, { email: `test.${randomString()}@${randomString()}.com` })),
+        assert400Request(Object.assign({ password: tooShort }, staticEmail)),
+        assert400Request(Object.assign({ password: tooLong }, staticEmail)),
       ]);
       /* eslint-enable max-len */
     });
