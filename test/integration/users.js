@@ -142,7 +142,15 @@ describe('/users router', () => {
           expect(res.body).to.be.ok;
           expect(res.body).to.have.all.keys('user', 'accessToken');
           expect(res.body.user).to.have.all.keys(
-            'settings', 'firstName', 'lastName', 'isConfirmed', 'email', 'createdAt', '_id'
+            '_id',
+            'email',
+            'firstName',
+            'lastName',
+            'settings',
+            'isConfirmed',
+            'createdAt',
+            'confirmationToken',
+            'confirmationTokenExpiry'
           );
           expect(res.body.accessToken).to.be.a('string');
         })

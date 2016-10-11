@@ -3,6 +3,7 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
+import emailUtility from '../../lib/emailUtility';
 import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
 
@@ -40,19 +41,26 @@ export default req => validate(req.body, {
       }
     })
     .then(hash => (
-      // Generate an accessToken
+      // Generate an accessToken for authentication session
       tokenFactory.createAccessToken()
         .then(accessToken => (
-          dbManager.getDb()
-            .collection('users')
-            .insertOne(userDefaults.mergeWithDefaultData({
-              email: req.body.email,
-              password: hash,
-              createdAt: new Date(),
-            }))
-            .then(result => [result, accessToken])
+          // Generate a token and token expiry for confirming email
+          tokenFactory.generateToken()
+            .then(([confirmationToken, confirmationTokenExpiry]) => (
+            dbManager.getDb()
+              .collection('users')
+              .insertOne(userDefaults.mergeWithDefaultData({
+                email: req.body.email,
+                password: hash,
+                createdAt: new Date(),
+                confirmationToken,
+                confirmationTokenExpiry,
+              }))
+              .then(result => [result, accessToken])
+              .then(emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+            ))
           ))
-        )
+        ))
         .then(([result, accessToken]) => {
           const { ops, insertedId: userId } = result;
 
@@ -66,6 +74,5 @@ export default req => validate(req.body, {
                 accessToken,
               }
             ));
-        })
-    ))
-  );
+        }))
+    );
