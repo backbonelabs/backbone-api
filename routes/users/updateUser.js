@@ -53,7 +53,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         if (user) {
           throw new Error('Email already taken');
         }
-        return tokenFactory.createConfirmationToken()
+        return tokenFactory.generateToken()
           .then(([confirmationToken, confirmationTokenExpiry]) =>
             Object.assign(body, { confirmationToken, confirmationTokenExpiry })
           )

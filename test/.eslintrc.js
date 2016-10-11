@@ -7,6 +7,7 @@ module.exports = {
     'import/no-extraneous-dependencies': [2, { devDependencies: true }],
     'new-cap': 0,
     'no-underscore-dangle': 0,
-    'no-unused-expressions': 0
+    'no-unused-expressions': 0,
+    'no-param-reassign': 0,
   }
 };
