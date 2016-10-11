@@ -48,7 +48,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     })
     .then(hash => (
       // Generate a token and token expiry
-      tokenFactory.createConfirmationToken()
+      tokenFactory.generateToken()
         .then(([confirmationToken, confirmationTokenExpiry]) => (
           dbManager.getDb()
             .collection('users')
@@ -59,8 +59,10 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
               confirmationToken,
               confirmationTokenExpiry,
             }))
-            .then(() => emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+            .then((results) => (
+              emailUtility.sendConfirmationEmail(req.body.email, confirmationToken)
+                .then(() => ({ id: results.insertedId }))
+            ))
       ))
     ))
-  ))
-  .then(() => (true));
+  ));

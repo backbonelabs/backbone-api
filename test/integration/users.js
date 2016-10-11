@@ -9,9 +9,13 @@ import userDefaults from '../../lib/userDefaults';
 let app;
 let db;
 let userFixture = {};
+let confirmedUserFixture;
+let unconfirmedUserFixture;
 
 const { mergeWithDefaultData } = userDefaults;
-const testEmail = `test.${randomString()}@${randomString()}.com`;
+const testEmail1 = `test.${randomString()}@${randomString()}.com`;
+const testEmail2 = `test.${randomString()}@${randomString()}.com`;
+const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken = 'testAccessToken';
@@ -25,14 +29,35 @@ before(() => Promise.resolve(server)
   .then(mDb => {
     db = mDb;
   })
-  .then(() => db.collection('users').insertOne(mergeWithDefaultData({
-    email: testEmail,
-    password: testPasswordHash,
-  })))
+  .then(() => (
+    db.collection('users')
+    .insertMany([
+      mergeWithDefaultData({
+        email: testEmail1,
+        password: testPasswordHash,
+      }),
+      {
+        email: testEmail2,
+        password: testPasswordHash,
+        isConfirmed: true,
+      },
+      {
+        email: testEmail3,
+        password: testPasswordHash,
+        isConfirmed: false,
+      },
+    ])
+  ))
   .then(results => {
-    userFixture = results.ops[0];
-    userFixture._id = userFixture._id.toHexString();
-    userIdsToDelete.push(userFixture._id);
+    const { ops } = results;
+    userFixture = ops[0];
+    confirmedUserFixture = ops[1];
+    unconfirmedUserFixture = ops[2];
+
+    [userFixture, confirmedUserFixture, unconfirmedUserFixture].forEach(value => {
+      value._id = value._id.toHexString();
+      userIdsToDelete.push(value._id);
+    });
   })
   .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
 );
@@ -69,8 +94,8 @@ describe('/users router', () => {
     }));
 
     it('should reject when only one password field is in request body', () => Promise.all([
-      assert400Request({ email: testEmail, password: testPassword }),
-      assert400Request({ email: testEmail, verifyPassword: testPassword }),
+      assert400Request({ email: testEmail1, password: testPassword }),
+      assert400Request({ email: testEmail1, verifyPassword: testPassword }),
     ]));
 
     it('should reject invalid email formats', () => {
@@ -90,7 +115,7 @@ describe('/users router', () => {
 
     it('should reject invalid password formats', () => {
       /* eslint-disable max-len */
-      const email = { email: testEmail };
+      const email = { email: testEmail1 };
       const tooShort = 'fO0';
       const tooLong = 'fO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@rfO0b@r';
       const allLowerCase = 'melatoninislife';
@@ -114,7 +139,7 @@ describe('/users router', () => {
     });
 
     it('should reject mismatching passwords', () => assert400Request({
-      email: testEmail,
+      email: testEmail1,
       password: testPassword,
       verifyPassword: `${testPassword}foo`,
     }));
@@ -125,24 +150,26 @@ describe('/users router', () => {
       verifyPassword: testPassword,
     }));
 
-    // TODO: Re-write test to take into account email operation time
-    // it('should create a new user', done => {
-    //   request(app)
-    //     .post(url)
-    //     .send({
-    //       email: `test.${randomString()}@${randomString()}.com`,
-    //       password: testPassword,
-    //       verifyPassword: testPassword,
-    //     })
-    //     .expect(200)
-    //     .expect(res => {
-    //       expect(res.body).to.be.ok;
-    //     })
-    //     .end((err, res) => {
-    //       userIdsToDelete.push(res.body.id);
-    //       done(err, res);
-    //     });
-    // });
+    it('should create a new user and send an email within 5000ms', function (done) {
+      this.timeout(5000);
+
+      request(app)
+        .post(url)
+        .send({
+          email: `test.${randomString()}@${randomString()}.com`,
+          password: testPassword,
+          verifyPassword: testPassword,
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body).to.be.ok;
+          expect(res.body.id).to.be.a('string');
+        })
+        .end((err, res) => {
+          userIdsToDelete.push(res.body.id);
+          done(err, res);
+        });
+    });
   });
 
   describe('GET /:id', () => {
@@ -335,6 +362,54 @@ describe('/users router', () => {
           const { body } = res;
           expect(body.postureThreshold).to.equal(postureThreshold);
         })
+        .end(done);
+    });
+  });
+
+  describe('GET /confirm/:email', () => {
+    const url = '/users/confirm/';
+    const assertRequestStatusCode = (statusCode, email) => new Promise((resolve, reject) => (
+    request(app)
+      .get(`${url}${email}`)
+      .send({})
+      .expect(statusCode)
+      .end((err, res) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(res);
+        }
+      })
+    ));
+
+    const assertRequest = () => (
+      request(app)
+        .get(`${url}${confirmedUserFixture.email}`)
+        .send({})
+        .expect(200)
+    );
+
+    it('should fail if user is not confirmed', () => (
+      assertRequestStatusCode(401, unconfirmedUserFixture.email)
+    ));
+
+    it('should pass if user is confirmed', () => (
+      assertRequestStatusCode(200, confirmedUserFixture.email)
+    ));
+
+    it('should not contain password in the returned user object', done => {
+      assertRequest()
+        .expect(res => (
+          expect(res.body.password).to.be.undefined
+        ))
+        .end(done);
+    });
+
+    it('should contain an accessToken in the returned user object', done => {
+      assertRequest()
+        .expect(res => (
+          expect(res.body.accessToken).to.be.a('string')
+        ))
         .end(done);
     });
   });
