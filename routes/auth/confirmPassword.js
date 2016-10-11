@@ -6,11 +6,10 @@ import dbManager from '../../lib/dbManager';
 /**
  * Checks if a password reset URL's token parameter matches a user document in database.
  * If a user is found and token is still valid, redirect user to update their password.
- * @param  {Object} req              Request
- * @param  {Object} req.query        Request query keys and their values
- * @param  {String} req.query.token  Password reset token
- * @return {Promise}                 Redirects user to a page where the user can change
- *                                   their password.
+ * @param  {Object} req             Request
+ * @param  {Object} req.query       Request query keys and their values
+ * @param  {String} req.query.token Password reset token
+ * @return {Promise} Redirects user to a page where the user can change their password
  */
 export default (req, res) => validate(req.query, { token: schemas.token },
   ['token'])

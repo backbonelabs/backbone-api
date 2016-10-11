@@ -7,10 +7,10 @@ import emailUtility from '../../lib/emailUtility';
 /**
  * Finds a user by their email and generates a password reset token and the date which
  * it expires. Send user email with link containing token for confirming reset request.
- * @param  {Object} req                      Request
- * @param  {Object} req.body                 Request body
- * @param  {String} req.body.email           Email
- * @return {Promise}                         Resolves with undefined upon successful email send
+ * @param  {Object} req            Request
+ * @param  {Object} req.body       Request body
+ * @param  {String} req.body.email Email
+ * @return {Promise} Resolves with undefined upon successful email send
  */
 export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .catch(() => {
