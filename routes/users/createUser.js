@@ -40,42 +40,40 @@ export default req => validate(req.body, {
           return password.hash(req.body.password);
         }
       })
-    .then(hash => (
-      // Generate token and token expiry for use in confirming user email
-      tokenFactory.generateToken()
-        .then(([confirmationToken, confirmationTokenExpiry]) => (
-          dbManager.getDb()
-            .collection('users')
-            .insertOne(userDefaults.mergeWithDefaultData({
-              email: req.body.email,
-              password: hash,
-              createdAt: new Date(),
-              confirmationToken,
-              confirmationTokenExpiry,
-            }))
-            .then(result => (
-              // Initiate sending of user confirmation email
-              emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
-              .then(() => (
-                // Create accessToken for authenticating session
-                tokenFactory.createAccessToken()
-                // Return result from inserting user and accessToken
-                .then(accessToken => [result, accessToken])
-              ))
-            ))
+  ))
+  .then(hash => (
+    // Generate token and token expiry for use in confirming user email
+    tokenFactory.generateToken()
+      .then(([confirmationToken, confirmationTokenExpiry]) => (
+        dbManager.getDb()
+          .collection('users')
+          .insertOne(userDefaults.mergeWithDefaultData({
+            email: req.body.email,
+            password: hash,
+            createdAt: new Date(),
+            confirmationToken,
+            confirmationTokenExpiry,
+          }))
+          .then(result => (
+            // Initiate sending of user confirmation email
+            emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
+              // Create accessToken for authenticating session
+              .then(() => tokenFactory.createAccessToken())
+              // Return result from inserting user and accessToken
+              .then(accessToken => [result, accessToken])
           ))
       ))
-      .then(([result, accessToken]) => {
-        const { ops, insertedId: userId } = result;
-        // Store accessToken along with userId
-        return dbManager.getDb()
-          .collection('accessTokens')
-          .insertOne({ userId, accessToken })
-            .then(() => (
-              {
-                user: sanitizeUser(ops[0]),
-                accessToken,
-              }
-            ));
-      }))
-    );
+  ))
+  .then(([result, accessToken]) => {
+    const { ops, insertedId: userId } = result;
+    // Store accessToken along with userId
+    return dbManager.getDb()
+      .collection('accessTokens')
+      .insertOne({ userId, accessToken })
+      .then(() => (
+        {
+          user: sanitizeUser(ops[0]),
+          accessToken,
+        }
+      ));
+  });
