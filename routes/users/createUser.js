@@ -27,52 +27,55 @@ export default req => validate(req.body, {
     );
   })
   .then(() => (
-    // Check if there is already a user with the email
+    // Check if there is already a user with this email
     dbManager.getDb()
-    .collection('users')
-    .findOne({ email: req.body.email })
-    .then(user => {
-      if (user) {
-        // Email is already associated to a confirmed user
-        throw new Error('Email is not available');
-      } else {
-        // Email is not associated to any existing users, hash password
-        return password.hash(req.body.password);
-      }
-    })
+      .collection('users')
+      .findOne({ email: req.body.email })
+      .then(user => {
+        if (user) {
+          // Email is already associated to a confirmed user
+          throw new Error('Email is not available');
+        } else {
+          // Email is not associated to any existing users, hash password
+          return password.hash(req.body.password);
+        }
+      })
     .then(hash => (
-      // Generate an accessToken for authentication session
-      tokenFactory.createAccessToken()
-        .then(accessToken => (
-          // Generate a token and token expiry for confirming email
-          tokenFactory.generateToken()
-            .then(([confirmationToken, confirmationTokenExpiry]) => (
-            dbManager.getDb()
-              .collection('users')
-              .insertOne(userDefaults.mergeWithDefaultData({
-                email: req.body.email,
-                password: hash,
-                createdAt: new Date(),
-                confirmationToken,
-                confirmationTokenExpiry,
-              }))
-              .then(result => [result, accessToken])
-              .then(emailUtility.sendConfirmationEmail(req.body.email, confirmationToken))
+      // Generate token and token expiry for use in confirming user email
+      tokenFactory.generateToken()
+        .then(([confirmationToken, confirmationTokenExpiry]) => (
+          dbManager.getDb()
+            .collection('users')
+            .insertOne(userDefaults.mergeWithDefaultData({
+              email: req.body.email,
+              password: hash,
+              createdAt: new Date(),
+              confirmationToken,
+              confirmationTokenExpiry,
+            }))
+            .then(result => (
+              // Initiate sending of user confirmation email
+              emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
+              .then(() => (
+                // Create accessToken for authenticating session
+                tokenFactory.createAccessToken()
+                // Return result from inserting user and accessToken
+                .then(accessToken => [result, accessToken])
+              ))
             ))
           ))
-        ))
-        .then(([result, accessToken]) => {
-          const { ops, insertedId: userId } = result;
-
-          // Store accessToken along with userId
-          return dbManager.getDb()
-            .collection('accessTokens')
-            .insertOne({ userId, accessToken })
+      ))
+      .then(([result, accessToken]) => {
+        const { ops, insertedId: userId } = result;
+        // Store accessToken along with userId
+        return dbManager.getDb()
+          .collection('accessTokens')
+          .insertOne({ userId, accessToken })
             .then(() => (
               {
                 user: sanitizeUser(ops[0]),
                 accessToken,
               }
             ));
-        }))
+      }))
     );
