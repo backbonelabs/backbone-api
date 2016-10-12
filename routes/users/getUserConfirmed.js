@@ -15,10 +15,9 @@ export default (req, res) => (
     .findOne({ email: req.params.email })
     .then(user => {
       if (!user) {
-        res.status(401);
+        res.status(400);
         throw new Error('This user does not exist.');
       } else if (!user.isConfirmed) {
-        res.status(401);
         return { isConfirmed: false };
       }
       return { isConfirmed: true };
