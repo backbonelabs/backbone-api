@@ -152,6 +152,7 @@ describe('/users router', () => {
             'confirmationToken',
             'confirmationTokenExpiry'
           );
+          expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
         })
         .end((err, res) => {
@@ -347,48 +348,28 @@ describe('/users router', () => {
 
   describe('GET /confirm/:email', () => {
     const url = '/users/confirm/';
-    const assertRequestStatusCode = (statusCode, email) => new Promise((resolve, reject) => (
-    request(app)
-      .get(`${url}${email}`)
-      .send({})
-      .expect(statusCode)
-      .end((err, res) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      })
-    ));
 
-    const assertRequest = () => (
+    const assertRequest = (email) => (
       request(app)
-        .get(`${url}${confirmedUserFixture.email}`)
+        .get(`${url}${email}`)
         .send({})
         .expect(200)
     );
 
-    it('should fail if user is not confirmed', () => (
-      assertRequestStatusCode(401, unconfirmedUserFixture.email)
-    ));
-
-    it('should pass if user is confirmed', () => (
-      assertRequestStatusCode(200, confirmedUserFixture.email)
-    ));
-
-    it('should not contain password in the returned user object', done => {
-      assertRequest()
-        .expect(res => (
-          expect(res.body.password).to.be.undefined
-        ))
+    it('should return object with isConfirmed equaling false, if user is not confirmed', done => {
+      assertRequest(unconfirmedUserFixture.email)
+        .expect(res => {
+          expect(res.body).to.have.property('isConfirmed');
+          expect(res.body.isConfirmed).to.be.false;
+        })
         .end(done);
     });
 
-    it('should contain an isConfirmed property in the returned object', done => {
-      assertRequest()
+    it('should return object with isConfirmed equaling true, if user is confirmed', done => {
+      assertRequest(confirmedUserFixture.email)
         .expect(res => {
           expect(res.body).to.have.property('isConfirmed');
-          expect(res.body.isConfirmed).to.be.a('boolean');
+          expect(res.body.isConfirmed).to.be.true;
         })
         .end(done);
     });
