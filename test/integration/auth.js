@@ -331,11 +331,11 @@ describe('/auth router', () => {
 
     it('should confirm email on valid and nonexpired token and set isConfirmed to true', () => (
       assertRequestStatusCode(200, validTokenUserFixture.confirmationToken)
-      .then(() => (
-        db.collection('users')
-          .findOne({ email: validTokenUserFixture.email })
-          .then(result => expect(result.isConfirmed).to.be.true)
-      ))
+        .then(() => (
+          db.collection('users')
+            .findOne({ email: validTokenUserFixture.email })
+            .then(result => expect(result.isConfirmed).to.be.true)
+        ))
     ));
   });
 
