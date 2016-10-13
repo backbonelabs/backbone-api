@@ -329,16 +329,13 @@ describe('/auth router', () => {
       assertRequestStatusCode(400, invalidTokenUserFixture.confirmationToken)
     ));
 
-    it('should confirm email on valid and nonexpired token', () => (
+    it('should confirm email on valid and nonexpired token and set isConfirmed to true', () => (
       assertRequestStatusCode(200, validTokenUserFixture.confirmationToken)
-    ));
-
-    it('should update isConfirmed to true when email is confirmed', () => (
-      db.collection('users')
-        .findOne({ email: validTokenUserFixture.email })
-        .then(result => {
-          expect(result.isConfirmed).to.be.true;
-        })
+      .then(() => (
+        db.collection('users')
+          .findOne({ email: validTokenUserFixture.email })
+          .then(result => expect(result.isConfirmed).to.be.true)
+      ))
     ));
   });
 
