@@ -335,11 +335,8 @@ describe('/auth router', () => {
 
     it('should update isConfirmed to true', (done) => {
       request(app)
-        .get(`/users/confirm/${validTokenUserFixture.email}`)
+        .get(`/auth/confirm/email/?token=${validTokenUserFixture.confirmationToken}`)
         .expect(200)
-        .expect(res => {
-          expect(res.body.isConfirmed).to.be.true;
-        })
         .end(done);
     });
   });
