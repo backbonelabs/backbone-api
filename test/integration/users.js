@@ -20,6 +20,7 @@ const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken = 'testAccessToken';
 const userIdsToDelete = [];
+const accessTokensToDelete = [testAccessToken];
 
 before(() => Promise.resolve(server)
   .then(expressApp => {
@@ -63,7 +64,7 @@ before(() => Promise.resolve(server)
 );
 
 after(() => db.collection('accessTokens')
-  .deleteOne({ accessToken: testAccessToken })
+  .deleteMany({ accessToken: { $in: accessTokensToDelete } })
   .then(() => db.collection('users').deleteMany({
     _id: {
       $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
@@ -157,6 +158,7 @@ describe('/users router', () => {
         })
         .end((err, res) => {
           userIdsToDelete.push(res.body.user._id);
+          accessTokensToDelete.push(res.body.accessToken);
           done(err, res);
         });
     });
