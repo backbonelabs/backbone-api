@@ -5,6 +5,7 @@ import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
 import emailUtility from '../../lib/emailUtility';
 import userDefaults from '../../lib/userDefaults';
+import sanitizeUser from '../../lib/sanitizeUser';
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -13,56 +14,66 @@ import userDefaults from '../../lib/userDefaults';
  * @param  {Object} req.body                Request body
  * @param  {String} req.body.email          Email
  * @param  {String} req.body.password       Password
- * @param  {String} req.body.verifyPassword Password
- * @return {Promise} Resolves with an object containing the user email, rejects if
- *                   both passwords do not match or the email address is being used
- *                   by another user
+ * @return {Promise} Resolves with an object containing user details sans password
+ *                   and user's current assigned accessToken.
  */
-export default req => validate(req.body, Object.assign({}, schemas.user, {
+export default req => validate(req.body, {
+  email: schemas.user.email,
   password: schemas.password,
-  verifyPassword: schemas.password,
-}), ['email', 'password', 'verifyPassword'], ['_id'])
+}, ['email', 'password'])
   .catch(() => {
-    throw new Error('Email must be a valid email format. Password must be at least 8 characters ' +
-      'and contain at least one number.');
-  })
-  .then(() => {
-    // Make sure password and verifyPassword are the same
-    if (req.body.password !== req.body.verifyPassword) {
-      throw new Error('Passwords must match');
-    }
+    throw new Error(
+      'Email must be a valid email format, and password must be at least 8 characters'
+    );
   })
   .then(() => (
-    // Check if there is already a user with the email
+    // Check if there is already a user with this email
     dbManager.getDb()
-    .collection('users')
-    .findOne({ email: req.body.email })
-    .then(user => {
-      if (user) {
-        // Email is already associated to a confirmed user
-        throw new Error('Email is not available');
-      } else {
-        // Email is not associated to any existing users, hash password
-        return password.hash(req.body.password);
-      }
-    })
-    .then(hash => (
-      // Generate a token and token expiry
-      tokenFactory.generateToken()
-        .then(([confirmationToken, confirmationTokenExpiry]) => (
-          dbManager.getDb()
-            .collection('users')
-            .insertOne(userDefaults.mergeWithDefaultData({
-              email: req.body.email,
-              password: hash,
-              createdAt: new Date(),
-              confirmationToken,
-              confirmationTokenExpiry,
-            }))
-            .then((results) => (
-              emailUtility.sendConfirmationEmail(req.body.email, confirmationToken)
-                .then(() => ({ id: results.insertedId }))
-            ))
+      .collection('users')
+      .findOne({ email: req.body.email })
+      .then(user => {
+        if (user) {
+          // Email is already associated to a confirmed user
+          throw new Error('Email is not available');
+        } else {
+          // Email is not associated to any existing users, hash password
+          return password.hash(req.body.password);
+        }
+      })
+  ))
+  .then(hash => (
+    // Generate token and token expiry for use in confirming user email
+    tokenFactory.generateToken()
+      .then(([confirmationToken, confirmationTokenExpiry]) => (
+        dbManager.getDb()
+          .collection('users')
+          .insertOne(userDefaults.mergeWithDefaultData({
+            email: req.body.email,
+            password: hash,
+            createdAt: new Date(),
+            confirmationToken,
+            confirmationTokenExpiry,
+          }))
+          .then(result => (
+            // Initiate sending of user confirmation email
+            emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
+              // Create accessToken for authenticating session
+              .then(() => tokenFactory.createAccessToken())
+              // Return result from inserting user and accessToken
+              .then(accessToken => [result, accessToken])
+          ))
       ))
-    ))
-  ));
+  ))
+  .then(([result, accessToken]) => {
+    const { ops, insertedId: userId } = result;
+    // Store accessToken along with userId
+    return dbManager.getDb()
+      .collection('accessTokens')
+      .insertOne({ userId, accessToken })
+      .then(() => (
+        {
+          user: sanitizeUser(ops[0]),
+          accessToken,
+        }
+      ));
+  });

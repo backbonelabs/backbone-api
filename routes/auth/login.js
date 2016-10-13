@@ -65,9 +65,7 @@ export default (req, res) => validate(req.body, {
           Promise.all([user, passwordUtil.verify(password, user.password)])
         ))
         .then(([user, isPasswordMatch]) => {
-          if (isPasswordMatch && !user.isConfirmed) {
-            throw new Error('Email is not confirmed. Please check your inbox.');
-          } else if (!isPasswordMatch) {
+          if (!isPasswordMatch) {
             throw new Error(errorMessage);
           }
           return user;

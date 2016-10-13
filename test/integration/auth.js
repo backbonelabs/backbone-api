@@ -178,20 +178,6 @@ describe('/auth router', () => {
     //     });
     // });
 
-    it('should reject on unconfirmed email/password combination', done => {
-      request(app)
-        .post(url)
-        .send({
-          email: unconfirmedUserFixture.email,
-          password: testPassword,
-        })
-        .expect(401)
-        .expect(res => {
-          expect(res.body).to.contain.all.keys(['error']);
-        })
-        .end(done);
-    });
-
     it('should return user profile and access token on valid email/password combination', done => {
       request(app)
         .post(url)
@@ -343,20 +329,14 @@ describe('/auth router', () => {
       assertRequestStatusCode(400, invalidTokenUserFixture.confirmationToken)
     ));
 
-    it('should confirm email on valid and nonexpired token', () => (
+    it('should confirm email on valid and nonexpired token and set isConfirmed to true', () => (
       assertRequestStatusCode(200, validTokenUserFixture.confirmationToken)
+        .then(() => (
+          db.collection('users')
+            .findOne({ email: validTokenUserFixture.email })
+            .then(result => expect(result.isConfirmed).to.be.true)
+        ))
     ));
-
-    it('should update isConfirmed to true and set accessToken upon confirmation', (done) => {
-      request(app)
-        .get(`/users/confirm/${validTokenUserFixture.email}`)
-        .expect(200)
-        .expect(res => {
-          expect(res.body.isConfirmed).to.be.true;
-          expect(res.body.accessToken).to.not.be.undefined;
-        })
-        .end(done);
-    });
   });
 
   describe('GET /confirm/password', () => {
