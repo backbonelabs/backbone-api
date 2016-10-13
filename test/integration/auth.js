@@ -333,12 +333,13 @@ describe('/auth router', () => {
       assertRequestStatusCode(200, validTokenUserFixture.confirmationToken)
     ));
 
-    it('should update isConfirmed to true', (done) => {
-      request(app)
-        .get(`/auth/confirm/email/?token=${validTokenUserFixture.confirmationToken}`)
-        .expect(200)
-        .end(done);
-    });
+    it('should update isConfirmed to true when email is confirmed', () => (
+      db.collection('users')
+        .findOne({ email: validTokenUserFixture.email })
+        .then(result => {
+          expect(result.isConfirmed).to.be.true;
+        })
+    ));
   });
 
   describe('GET /confirm/password', () => {
