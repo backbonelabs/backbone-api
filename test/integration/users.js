@@ -345,40 +345,4 @@ describe('/users router', () => {
         .end(done);
     });
   });
-
-  describe('GET /confirm/:email', () => {
-    const url = '/users/confirm/';
-
-    const assertRequest = (email, statusCode) => (
-      request(app)
-        .get(`${url}${email}`)
-        .send({})
-        .expect(statusCode)
-    );
-
-    it('should return object with isConfirmed equaling false, if user is not confirmed', done => {
-      assertRequest(unconfirmedUserFixture.email, 200)
-        .expect(res => {
-          expect(res.body).to.have.property('isConfirmed');
-          expect(res.body.isConfirmed).to.be.false;
-        })
-        .end(done);
-    });
-
-    it('should return object with isConfirmed equaling true, if user is confirmed', done => {
-      assertRequest(confirmedUserFixture.email, 200)
-        .expect(res => {
-          expect(res.body).to.have.property('isConfirmed');
-          expect(res.body.isConfirmed).to.be.true;
-        })
-        .end(done);
-    });
-
-    it('should fail if user email does not exist', done => {
-      const randomEmail = `test.${randomString()}@${randomString()}.com`;
-
-      assertRequest(randomEmail, 400)
-        .end(done);
-    });
-  });
 });
