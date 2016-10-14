@@ -1,5 +1,4 @@
 --require babel-register
 --require localenv
 --timeout 9999
-./test/initiate.js
 ./test/integration
