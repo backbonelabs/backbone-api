@@ -1,8 +1,11 @@
+import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
+import emailUtility from '../../lib/emailUtility';
 
+const debug = Debug('routes:auth:passwordReset');
 /**
  * Finds a user by their email and generates a password reset token and the date which
  * it expires. Send user email with link containing token for confirming reset request.
@@ -24,9 +27,10 @@ export default req => validate(req.body, {
     // Hash password
     return password.hash(req.body.password);
   })
-  .then((passwordHash) => (
+  .then((passwordHash) => {
     // Update user password and remove password reset token
-    dbManager.getDb()
+    debug('Updating password');
+    return dbManager.getDb()
       .collection('users')
       .findOneAndUpdate({
         passwordResetToken: req.body.token,
@@ -37,10 +41,16 @@ export default req => validate(req.body, {
           passwordResetToken: '',
           passwordResetTokenExpiry: '',
         },
-      })
-  ))
+      });
+  })
   .then((result) => {
     if (!result.value) {
-      throw new Error('Invalid reset token');
+      debug('Invalid password reset token');
+      throw new Error('Invalid password reset token');
     }
+    debug('Password reset, sending confirmation email');
+    return emailUtility.sendPasswordResetSuccessEmail(result.value.email)
+      .catch(() => {
+        // Ignore email errors
+      });
   });
