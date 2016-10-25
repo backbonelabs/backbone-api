@@ -255,8 +255,8 @@ describe('/auth router', () => {
     // });
   });
 
-  describe('POST /reset', () => {
-    const url = '/auth/reset';
+  describe('POST /password-reset-token', () => {
+    const url = '/auth/password-reset-token';
     const assertRequestStatusCode = (statusCode, body) => new Promise(
       (resolve, reject) => {
         request(app)
@@ -339,13 +339,15 @@ describe('/auth router', () => {
     ));
   });
 
-  describe('GET /confirm/password', () => {
-    const url = '/auth/confirm/password?token=';
+  describe('POST /password-reset', () => {
+    const url = '/auth/password-reset';
+    const randomPassword = randomString({ length: 10 });
+    const invalidPassword = 'abc';
 
-    const assertRequestStatusCode = (statusCode, token) => new Promise((resolve, reject) => (
+    const assertRequestStatusCode = (statusCode, data = {}) => new Promise((resolve, reject) => (
         request(app)
-          .get(`${url}${token}`)
-          .send({})
+          .post(`${url}`)
+          .send(data)
           .expect(statusCode)
           .end((err, res) => {
             if (err) {
@@ -356,24 +358,66 @@ describe('/auth router', () => {
           })
       ));
 
-    it('should reject when token is not in request query', () => (
-      assertRequestStatusCode(400, '')
+    it('should reject when token is not in request body', () => (
+      assertRequestStatusCode(400, {
+        password: randomPassword,
+        verifyPassword: randomPassword,
+      })
     ));
 
     it('should reject when token is incorrect', () => (
-      assertRequestStatusCode(400, `${validTokenUserFixture.passwordResetToken}123`)
+      assertRequestStatusCode(400, {
+        token: `${validTokenUserFixture.passwordResetToken}123`,
+        password: randomPassword,
+        verifyPassword: randomPassword,
+      })
     ));
 
     it('should reject when token is expired', () => (
-      assertRequestStatusCode(400, invalidTokenUserFixture.passwordResetToken)
+      assertRequestStatusCode(400, {
+        token: invalidTokenUserFixture.passwordResetToken,
+        password: randomPassword,
+        verifyPassword: randomPassword,
+      })
+    ));
+
+    it('should reject when passwords are not valid formats', () => (
+      assertRequestStatusCode(400, {
+        token: validTokenUserFixture.passwordResetToken,
+        password: invalidPassword,
+        verifyPassword: randomPassword,
+      })
+        .then(() => (
+          assertRequestStatusCode(400, {
+            token: validTokenUserFixture.passwordResetToken,
+            password: randomPassword,
+            verifyPassword: invalidPassword,
+          })
+        ))
+    ));
+
+    it('should reject when passwords do not match', () => (
+      assertRequestStatusCode(400, {
+        token: validTokenUserFixture.passwordResetToken,
+        password: randomPassword,
+        verifyPassword: `${randomPassword}1`,
+      })
     ));
 
     it('should allow reset on valid and nonexpired token', () => (
-      assertRequestStatusCode(200, validTokenUserFixture.passwordResetToken)
+      assertRequestStatusCode(200, {
+        token: validTokenUserFixture.passwordResetToken,
+        password: randomPassword,
+        verifyPassword: randomPassword,
+      })
     ));
 
     it('should reject when trying to reset with a previously used token', () => (
-      assertRequestStatusCode(400, validTokenUserFixture.passwordResetToken)
+      assertRequestStatusCode(400, {
+        token: validTokenUserFixture.passwordResetToken,
+        password: randomPassword,
+        verifyPassword: randomPassword,
+      })
     ));
   });
 });
