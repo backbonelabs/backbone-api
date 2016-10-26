@@ -5,8 +5,21 @@ API server for the Backbone app
 
 ## Requirements
 
-- Node.js 6.3.1
-- MongoDB 3.2.8 (for local dev)
+- Node.js 6.2.2
+- MongoDB 3.2.8
+
+## Setup
+
+Ensure the MongoDB server is running before launching the API server.
+
+Ask another developer for the following environment variables values, which you'll store in your `.env.local` file (create the file if it doesn't already exist):
+
+* BL_ACCESS_TOKEN_SECRET
+* BL_MAILGUN_API
+
+### Email settings
+
+By default, emails will not be sent in development mode. To have emails be sent, set the `BL_SILENT_EMAIL` environment variable to `false`. Furthermore, emails sent in development mode will be sent to the email address specified in `BL_TEST_EMAIL`, so feel free to set it to an email address you have access to by storing it in your `.env.local` file.
 
 ## Deploying to AWS
 
