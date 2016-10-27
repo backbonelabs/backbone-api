@@ -7,12 +7,14 @@ import emailUtility from '../../lib/emailUtility';
 
 const debug = Debug('routes:auth:passwordReset');
 /**
- * Finds a user by their email and generates a password reset token and the date which
- * it expires. Send user email with link containing token for confirming reset request.
- * @param  {Object} req            Request
- * @param  {Object} req.body       Request body
- * @param  {String} req.body.email Email
- * @return {Promise} Resolves with undefined upon successful email send
+ * Resets a user's password by first validating the password reset token
+ * included in the request.
+ * @param  {Object} req                     Request
+ * @param  {Object} req.body                Request body
+ * @param  {String} req.body.token          Password reset token
+ * @param  {String} req.body.password       New password
+ * @param  {String} req.body.verifyPassword New password
+ * @return {Promise} Resolves with undefined upon successful password reset
  */
 export default req => validate(req.body, {
   token: schemas.token,
