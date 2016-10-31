@@ -5,7 +5,7 @@ API server for the Backbone app
 
 ## Requirements
 
-- Node.js 6.2.2
+- Node.js 6.2.2 (This is currently the highest Node.js version supported by AWS)
 - MongoDB 3.2.8
 
 ## Setup
