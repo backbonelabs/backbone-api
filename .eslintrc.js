@@ -12,5 +12,6 @@ module.exports = {
     'no-console': [1],
     'no-underscore-dangle': [0],
     'prefer-template': [1],
+    'comma-dangle': [0],
   }
 };
