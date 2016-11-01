@@ -5,10 +5,12 @@ API server for the Backbone app
 
 ## Requirements
 
-- Node.js 6.2.2 (This is currently the highest Node.js version supported by AWS)
+- Node.js 6.2.2 (Use the exact version as this is currently the Node.js version we use in AWS)
 - MongoDB 3.2.8
 
 ## Setup
+
+Use [Yarn](https://yarnpkg.com) instead of npm to install package dependencies. Using Yarn will ensure you get the same dependency versions. Assuming you already have Yarn installed, simply run yarn install from the project root.
 
 Ensure the MongoDB server is running before launching the API server.
 
