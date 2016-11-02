@@ -8,7 +8,6 @@ import tokenFactory from '../../lib/tokenFactory';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid login credentials. Please try again.';
-const notConfirmedMessage = 'Email is not confirmed. Please check your inbox.';
 
 /**
  * Verifies a user account by checking the email and password and returns the
@@ -77,7 +76,8 @@ export default (req, res) => validate(req.body, {
     return userResult;
   })
   .catch((err) => {
-    if (err.message === errorMessage || err.message === notConfirmedMessage) {
+    if (err.message === errorMessage) {
+      // Use 401 status code for invalid auth errors
       res.status(401);
     }
     throw err;
