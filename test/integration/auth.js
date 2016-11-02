@@ -155,29 +155,6 @@ describe('/auth router', () => {
       password: `${testPassword}1`,
     }));
 
-    it('should reject an invalid access token', () => assertRequestStatusCode(401, {
-      accessToken: randomString({ length: 64 }),
-    }));
-
-    // TODO: Write tests that include check for whether user `isConfirmed`
-    // it('should return email and access token on confirmed email/password combination', done => {
-    //   request(app)
-    //     .post(url)
-    //     .send({
-    //       email: unconfirmedUserFixture.email,
-    //       password: testPassword,
-    //     })
-    //     .expect(200)
-    //     .expect(res => {
-    //       expect(res.body).to.contain.all.keys(['email', 'accessToken']);
-    //       expect(res.body.email).to.equal(unconfirmedUserFixture.email);
-    //     })
-    //     .end((err, res) => {
-    //       accessTokensToDelete.push(res.body.accessToken);
-    //       done(err, res);
-    //     });
-    // });
-
     it('should return user profile and access token on valid email/password combination', done => {
       request(app)
         .post(url)
@@ -187,27 +164,8 @@ describe('/auth router', () => {
         })
         .expect(200)
         .expect(res => {
-          expect(res.body).to.contain.all.keys(['_id', 'email']);
+          expect(res.body).to.contain.all.keys(['_id', 'email', 'accessToken']);
           expect(res.body).to.not.contain.all.keys(['password']);
-          expect(res.body.accessToken.length).to.equal(64);
-        })
-        .end((err, res) => {
-          if (!err) {
-            accessTokensToDelete.push(res.body.accessToken);
-          }
-          done(err, res);
-        });
-    });
-
-    it('should return user profile and new access token on valid access token', done => {
-      request(app)
-        .post(url)
-        .send({ accessToken: accessTokenFixture.accessToken })
-        .expect(200)
-        .expect(res => {
-          expect(res.body).to.contain.all.keys(['_id', 'email']);
-          expect(res.body).to.not.contain.all.keys(['password']);
-          expect(res.body.accessToken).to.not.equal(accessTokenFixture.accessToken);
           expect(res.body.accessToken.length).to.equal(64);
         })
         .end((err, res) => {
@@ -293,9 +251,10 @@ describe('/auth router', () => {
 
     it('should send a password reset email in less than 5000ms', function () {
       // Have to use anonymous function or else `this` is in the wrong context
+      // A password reset email will be sent, so we increase the timeout
+      // to account for potential delays with the email integration
       this.timeout(5000);
 
-      // Send a password reset email and invoke done when operation complete
       return assertRequestStatusCode(200, { email: confirmedUserFixture.email });
     });
   });
