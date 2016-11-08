@@ -150,6 +150,7 @@ describe('/users router', () => {
             'gender',
             'height',
             'weight',
+            'birthdate',
             'hasOnboarded',
             'lastName',
             'settings',
@@ -157,6 +158,14 @@ describe('/users router', () => {
             'createdAt',
             'confirmationToken',
             'confirmationTokenExpiry'
+          );
+          expect(res.body.user.settings).to.have.all.keys(
+            'postureThreshold',
+            'backboneVibration',
+            'phoneVibration',
+            'vibrationStrength',
+            'vibrationPattern',
+            'slouchTimeThreshold'
           );
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
