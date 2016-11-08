@@ -18,13 +18,18 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
   verifyPassword: schemas.password,
 }), [], ['_id'])
   .then(() => {
-    // Check if we need to update the password
     const {
       password: pw,
       verifyPassword,
       ...body,
     } = req.body;
 
+    // Ensure birthdate gets saved as ISODate by making it a JS Date object
+    if (body.birthdate) {
+      body.birthdate = new Date(body.birthdate);
+    }
+
+    // Check if we need to update the password
     if (pw || verifyPassword) {
       // Make sure password and verifyPassword are the same
       if (pw !== verifyPassword) {
