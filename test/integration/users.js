@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import randomString from 'random-string';
 import server from '../../index';
 import userDefaults from '../../lib/userDefaults';
+import constants from '../../lib/constants';
 
 let app;
 let db;
@@ -149,7 +150,9 @@ describe('/users router', () => {
             'nickname',
             'gender',
             'height',
+            'heightUnitPreference',
             'weight',
+            'weightUnitPreference',
             'birthdate',
             'hasOnboarded',
             'lastName',
@@ -159,6 +162,8 @@ describe('/users router', () => {
             'confirmationToken',
             'confirmationTokenExpiry'
           );
+          expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
+          expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
           expect(res.body.user.settings).to.have.all.keys(
             'postureThreshold',
             'backboneVibration',
