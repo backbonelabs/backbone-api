@@ -3,7 +3,7 @@ import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
-import emailUtility from '../../lib/emailUtility';
+import EmailUtility from '../../lib/EmailUtility';
 import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
 
@@ -54,14 +54,15 @@ export default req => validate(req.body, {
             confirmationToken,
             confirmationTokenExpiry,
           }))
-          .then(result => (
+          .then(result => {
             // Initiate sending of user confirmation email
-            emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
+            const emailUtility = EmailUtility.getMailer();
+            return emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)
               // Create accessToken for authenticating session
               .then(() => tokenFactory.createAccessToken())
               // Return result from inserting user and accessToken
-              .then(accessToken => [result, accessToken])
-          ))
+              .then(accessToken => [result, accessToken]);
+          })
       ))
   ))
   .then(([result, accessToken]) => {

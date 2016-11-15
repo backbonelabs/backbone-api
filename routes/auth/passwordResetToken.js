@@ -2,7 +2,7 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import tokenFactory from '../../lib/tokenFactory';
-import emailUtility from '../../lib/emailUtility';
+import EmailUtility from '../../lib/EmailUtility';
 
 /**
  * Finds a user by their email and generates a password reset token and the date which
@@ -37,9 +37,11 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
                 passwordResetTokenExpiry,
               } }
             )
-            .then((updatedUser) =>
-              emailUtility.sendPasswordResetEmail(updatedUser.value.email, passwordResetToken)
-            )
+            .then((updatedUser) => {
+              const emailUtility = EmailUtility.getMailer();
+              return emailUtility
+                .sendPasswordResetEmail(updatedUser.value.email, passwordResetToken);
+            })
         ));
     }
   });

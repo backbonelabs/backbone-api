@@ -2,7 +2,7 @@ import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
-import emailUtility from '../../lib/emailUtility';
+import EmailUtility from '../../lib/EmailUtility';
 
 const debug = Debug('routes:support:createTicket');
 
@@ -34,10 +34,11 @@ export default req => validate(req.body, {
         throw new Error('Invalid user');
       })
   ))
-  .then(user => (
+  .then(user => {
     // Send email to support inbox
-    emailUtility.sendSupportEmail(user.email, req.body.message)
-  ))
+    const emailUtility = EmailUtility.getMailer();
+    return emailUtility.sendSupportEmail(user.email, req.body.message);
+  })
   .then(() => {
     debug('Sent support email');
     return {};
