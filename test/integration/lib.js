@@ -17,7 +17,7 @@ describe('Library modules', () => {
       const data = {
         from: fromEmail,
         subject: 'Test',
-        text: 'This was sent from an automated test',
+        text: 'This was sent from the automated integration test for EmailUtility.sendEmail()',
       };
 
       const startTime = process.hrtime();

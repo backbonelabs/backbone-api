@@ -3,6 +3,18 @@ import sinon from 'sinon';
 import EmailUtility from '../../lib/EmailUtility';
 
 describe('EmailUtility', () => {
+  let emailUtility;
+  let sendEmailStub;
+
+  beforeEach(() => {
+    emailUtility = EmailUtility.init({
+      apiKey: process.env.BL_MAILGUN_API,
+      domain: process.env.BL_MAILGUN_DOMAIN,
+      silentEmail: false,
+      useTestEmail: false,
+    });
+  });
+
   it('is a class', () => {
     expect(EmailUtility.EmailUtility).to.be.a('function');
     expect(EmailUtility.EmailUtility.name).to.equal('EmailUtility');
@@ -14,11 +26,6 @@ describe('EmailUtility', () => {
     });
 
     it('returns a Promise', () => {
-      const emailUtility = EmailUtility.init({
-        apiKey: process.env.BL_MAILGUN_API,
-        domain: process.env.BL_MAILGUN_DOMAIN,
-      });
-
       const emailSendStub = sinon.stub().callsArg(1);
       sinon.stub(emailUtility.mailer, 'messages', () => ({
         send: emailSendStub,
@@ -28,7 +35,7 @@ describe('EmailUtility', () => {
     });
 
     it('will resolve and not send an email if the silentEmail option is truthy', () => {
-      const emailUtility = EmailUtility.init({
+      emailUtility = EmailUtility.init({
         apiKey: process.env.BL_MAILGUN_API,
         domain: process.env.BL_MAILGUN_DOMAIN,
         silentEmail: true,
@@ -48,7 +55,7 @@ describe('EmailUtility', () => {
 
     it('will use Mailgun to send a message to the email defined in the testEmail option', () => {
       const testEmail = 'test@gobackbone.com';
-      const emailUtility = EmailUtility.init({
+      emailUtility = EmailUtility.init({
         apiKey: process.env.BL_MAILGUN_API,
         domain: process.env.BL_MAILGUN_DOMAIN,
         silentEmail: false,
@@ -78,7 +85,7 @@ describe('EmailUtility', () => {
     });
 
     it('will use Mailgun to send a message', () => {
-      const emailUtility = EmailUtility.init({
+      emailUtility = EmailUtility.init({
         apiKey: process.env.BL_MAILGUN_API,
         domain: process.env.BL_MAILGUN_DOMAIN,
         silentEmail: false,
@@ -108,6 +115,99 @@ describe('EmailUtility', () => {
           }));
           emailUtility.mailer.messages.restore();
         });
+    });
+  });
+
+  describe('sendConfirmationEmail', () => {
+    it('is a function', () => {
+      expect(EmailUtility.EmailUtility.prototype.sendConfirmationEmail).to.be.a('function');
+    });
+
+    it('calls the sendEmail method with the correct arguments', () => {
+      sendEmailStub = sinon.stub(emailUtility, 'sendEmail', () => Promise.resolve());
+      const recipientEmail = 'test+sendConfirmationEmail@gobackbone.com';
+      const token = 'token123';
+
+      emailUtility.sendConfirmationEmail(recipientEmail, token);
+
+      const spyCall = sendEmailStub.getCall(0);
+      const args = spyCall.args;
+      const link = `${process.env.BL_DOMAIN_URL}/auth/confirm/email?token=${token}`;
+
+      expect(sendEmailStub.callCount).to.equal(1);
+      expect(args[0]).to.be.an('object');
+      expect(args[0].subject).to.equal(EmailUtility.templates.confirmEmail.subject);
+      expect(args[0].text).to.contain(link);
+      expect(args[1]).to.equal(recipientEmail);
+    });
+  });
+
+  describe('sendPasswordResetEmail', () => {
+    it('is a function', () => {
+      expect(EmailUtility.EmailUtility.prototype.sendPasswordResetEmail).to.be.a('function');
+    });
+
+    it('calls the sendEmail method with the correct arguments', () => {
+      sendEmailStub = sinon.stub(emailUtility, 'sendEmail', () => Promise.resolve());
+      const recipientEmail = 'test+sendPasswordResetEmail@gobackbone.com';
+      const token = 'token123';
+
+      emailUtility.sendPasswordResetEmail(recipientEmail, token);
+
+      const spyCall = sendEmailStub.getCall(0);
+      const args = spyCall.args;
+      const link = `${process.env.BL_WEB_URL}/password-reset?token=${token}`;
+
+      expect(sendEmailStub.callCount).to.equal(1);
+      expect(args[0]).to.be.an('object');
+      expect(args[0].subject).to.equal(EmailUtility.templates.passwordReset.subject);
+      expect(args[0].text).to.contain(link);
+      expect(args[1]).to.equal(recipientEmail);
+    });
+  });
+
+  describe('sendPasswordResetSuccessEmail', () => {
+    it('is a function', () => {
+      expect(EmailUtility.EmailUtility.prototype.sendPasswordResetSuccessEmail).to.be.a('function');
+    });
+
+    it('calls the sendEmail method with the correct arguments', () => {
+      sendEmailStub = sinon.stub(emailUtility, 'sendEmail', () => Promise.resolve());
+      const recipientEmail = 'test+sendPasswordResetSuccessEmail@gobackbone.com';
+
+      emailUtility.sendPasswordResetSuccessEmail(recipientEmail);
+
+      const spyCall = sendEmailStub.getCall(0);
+      const args = spyCall.args;
+
+      expect(sendEmailStub.callCount).to.equal(1);
+      expect(args[0]).to.be.an('object');
+      expect(args[0].subject).to.equal(EmailUtility.templates.passwordResetSuccess.subject);
+      expect(args[1]).to.equal(recipientEmail);
+    });
+  });
+
+  describe('sendSupportEmail', () => {
+    it('is a function', () => {
+      expect(EmailUtility.EmailUtility.prototype.sendSupportEmail).to.be.a('function');
+    });
+
+    it('calls the sendEmail method with the correct arguments', () => {
+      sendEmailStub = sinon.stub(emailUtility, 'sendEmail', () => Promise.resolve());
+      const userEmail = 'test+sendSupportEmail@gobackbone.com';
+      const message = 'Hello there';
+
+      emailUtility.sendSupportEmail(userEmail, message);
+
+      const spyCall = sendEmailStub.getCall(0);
+      const args = spyCall.args;
+
+      expect(sendEmailStub.callCount).to.equal(1);
+      expect(args[0]).to.be.an('object');
+      expect(args[0].subject).to.equal(EmailUtility.templates.supportTicket.subject);
+      expect(args[0].from).to.equal(userEmail);
+      expect(args[0].text).to.equal(message);
+      expect(args[1]).to.equal('support@gobackbone.com');
     });
   });
 });
