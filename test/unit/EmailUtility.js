@@ -106,6 +106,7 @@ describe('EmailUtility', () => {
             ...data,
             to: toEmail,
           }));
+          emailUtility.mailer.messages.restore();
         });
     });
   });
