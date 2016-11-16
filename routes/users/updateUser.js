@@ -4,7 +4,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
-import emailUtility from '../../lib/emailUtility';
+import EmailUtility from '../../lib/EmailUtility';
 
 /**
  * Updates a user
@@ -62,7 +62,10 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           .then(([confirmationToken, confirmationTokenExpiry]) =>
             Object.assign(body, { confirmationToken, confirmationTokenExpiry })
           )
-          .then(() => emailUtility.sendConfirmationEmail(email, body.confirmationToken))
+          .then(() => {
+            const emailUtility = EmailUtility.getMailer();
+            return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
+          })
           .then(() => Object.assign(body, { isConfirmed: false }));
       });
     }

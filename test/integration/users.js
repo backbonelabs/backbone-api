@@ -3,10 +3,13 @@ import request from 'supertest';
 import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
+import sinon from 'sinon';
 import server from '../../index';
 import userDefaults from '../../lib/userDefaults';
 import constants from '../../lib/constants';
+import EmailUtility from '../../lib/EmailUtility';
 
+let emailUtility;
 let app;
 let db;
 let userFixture = {};
@@ -75,12 +78,25 @@ after(() => db.collection('accessTokens')
 
 describe('/users router', () => {
   describe('POST /', () => {
+    let sendConfirmationEmailStub;
+
+    beforeEach(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendConfirmationEmailStub = sinon
+        .stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
+    });
+
     const url = '/users';
     const assert400Request = body => new Promise((resolve, reject) => {
       request(app)
         .post(url)
         .send(body)
         .expect(400)
+        .expect(() => expect(sendConfirmationEmailStub.callCount).to.equal(0))
         .end((err, res) => {
           if (err) {
             reject(err);
@@ -174,6 +190,7 @@ describe('/users router', () => {
           );
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
+          expect(sendConfirmationEmailStub.callCount).to.equal(1);
         })
         .end((err, res) => {
           userIdsToDelete.push(res.body.user._id);

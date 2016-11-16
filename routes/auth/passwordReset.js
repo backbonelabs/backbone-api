@@ -3,7 +3,7 @@ import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
-import emailUtility from '../../lib/emailUtility';
+import EmailUtility from '../../lib/EmailUtility';
 
 const debug = Debug('routes:auth:passwordReset');
 /**
@@ -51,6 +51,7 @@ export default req => validate(req.body, {
       throw new Error('Invalid password reset token');
     }
     debug('Password reset, sending confirmation email');
+    const emailUtility = EmailUtility.getMailer();
     return emailUtility.sendPasswordResetSuccessEmail(result.value.email)
       .catch(() => {
         // Ignore email errors

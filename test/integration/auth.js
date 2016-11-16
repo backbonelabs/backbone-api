@@ -3,9 +3,12 @@ import request from 'supertest';
 import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
+import sinon from 'sinon';
 import server from '../../index';
 import tokenFactory from '../../lib/tokenFactory';
+import EmailUtility from '../../lib/EmailUtility';
 
+let emailUtility;
 let app;
 let db;
 let unconfirmedUserFixture;
@@ -214,6 +217,18 @@ describe('/auth router', () => {
   });
 
   describe('POST /password-reset-token', () => {
+    let sendPasswordResetEmailStub;
+
+    beforeEach(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendPasswordResetEmailStub = sinon
+        .stub(emailUtility, 'sendPasswordResetEmail', () => Promise.resolve());
+    });
+
     const url = '/auth/password-reset-token';
     const assertRequestStatusCode = (statusCode, body) => new Promise(
       (resolve, reject) => {
@@ -221,8 +236,10 @@ describe('/auth router', () => {
           .post(url)
           .send(body)
           .expect(statusCode)
-          .expect(res => {
-            expect(res.status).to.eql(statusCode);
+          .expect(() => {
+            if (statusCode >= 400) {
+              expect(sendPasswordResetEmailStub.callCount).to.equal(0);
+            }
           })
           .end((err, res) => {
             if (err) {
@@ -249,14 +266,13 @@ describe('/auth router', () => {
       ]);
     });
 
-    it('should send a password reset email in less than 5000ms', function () {
-      // Have to use anonymous function or else `this` is in the wrong context
-      // A password reset email will be sent, so we increase the timeout
-      // to account for potential delays with the email integration
-      this.timeout(5000);
-
-      return assertRequestStatusCode(200, { email: confirmedUserFixture.email });
-    });
+    it('should send a password reset email', () => (
+      assertRequestStatusCode(200, { email: confirmedUserFixture.email })
+        .then(() => {
+          expect(sendPasswordResetEmailStub.callCount).to.equal(1);
+          expect(sendPasswordResetEmailStub.calledWith(confirmedUserFixture.email)).to.be.true;
+        })
+    ));
   });
 
   describe('GET /confirm/email', () => {
@@ -299,6 +315,18 @@ describe('/auth router', () => {
   });
 
   describe('POST /password-reset', () => {
+    let sendPasswordResetSuccessEmailStub;
+
+    beforeEach(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendPasswordResetSuccessEmailStub = sinon
+        .stub(emailUtility, 'sendPasswordResetSuccessEmail', () => Promise.resolve());
+    });
+
     const url = '/auth/password-reset';
     const randomPassword = randomString({ length: 10 });
     const invalidPassword = 'abc';
@@ -308,6 +336,11 @@ describe('/auth router', () => {
           .post(`${url}`)
           .send(data)
           .expect(statusCode)
+          .expect(() => {
+            if (statusCode >= 400) {
+              expect(sendPasswordResetSuccessEmailStub.callCount).to.equal(0);
+            }
+          })
           .end((err, res) => {
             if (err) {
               reject(err);
@@ -369,6 +402,11 @@ describe('/auth router', () => {
         password: randomPassword,
         verifyPassword: randomPassword,
       })
+        .then(() => {
+          expect(sendPasswordResetSuccessEmailStub.callCount).to.equal(1);
+          expect(sendPasswordResetSuccessEmailStub
+            .calledWith(validTokenUserFixture.email)).to.be.true;
+        })
     ));
 
     it('should reject when trying to reset with a previously used token', () => (
