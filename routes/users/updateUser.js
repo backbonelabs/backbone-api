@@ -1,3 +1,4 @@
+import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -5,6 +6,8 @@ import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
+
+const debug = Debug('routes:users:updateUsers');
 
 /**
  * Updates a user
@@ -14,6 +17,7 @@ import EmailUtility from '../../lib/EmailUtility';
  * @return {Promise} Resolves with the user object containing the updated attributes, sans password
  */
 export default req => validate(req.body, Object.assign({}, schemas.user, {
+  currentPassword: schemas.password,
   password: schemas.password,
   verifyPassword: schemas.password,
 }), [], ['_id'])
@@ -21,6 +25,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     const {
       password: pw,
       verifyPassword,
+      currentPassword,
       ...body,
     } = req.body;
 
@@ -31,17 +36,42 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
 
     // Check if we need to update the password
     if (pw || verifyPassword) {
-      // Make sure password and verifyPassword are the same
-      if (pw !== verifyPassword) {
-        throw new Error('Passwords must match');
-      }
+      return dbManager.getDb()
+        .collection('users')
+        .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
+        .limit(1)
+        .next()
+        .then((user) => {
+          if (user) {
+            debug('Found user by id', req.params.id);
+            return user;
+          }
+          debug('Did not find user by id', req.params.id);
+          throw new Error('Invalid user id');
+        })
+      .then((user) => (
+        // Verify password matches
+        Promise.all([user, password.verify(currentPassword, user.password)])
+      ))
+      .then((response) => {
+        // If password doesn't match
+        if (!response[1]) {
+          debug('Invalid password');
+          throw new Error('Invalid password');
+        }
 
-      // Hash password
-      return password.hash(pw)
-        .then(hash => {
-          body.password = hash;
-          return body;
-        });
+        // Make sure password and verifyPassword are the same
+        if (pw !== verifyPassword) {
+          throw new Error('Passwords must match');
+        }
+
+        // Hash password
+        return password.hash(pw)
+          .then(hash => {
+            body.password = hash;
+            return body;
+          });
+      });
     }
 
     return body;
