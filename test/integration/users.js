@@ -308,10 +308,10 @@ describe('/users router', () => {
     });
 
     it('should update password', () => {
-      const newPassword = 'Abcdef01';
+      const newPassword = 'abcd1234';
       return new Promise((resolve, reject) => {
         assertRequest({
-          currentPassword: newPassword,
+          currentPassword: testPassword,
           password: newPassword,
           verifyPassword: newPassword,
         })
