@@ -34,8 +34,11 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       body.birthdate = new Date(body.birthdate);
     }
 
-    // Check if we need to update the password
     if (pw || verifyPassword) {
+      // Make sure password and verifyPassword are the same
+      if (pw !== verifyPassword) {
+        throw new Error('Passwords must match');
+      }
       return dbManager.getDb()
         .collection('users')
         .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
@@ -51,20 +54,14 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         })
       .then((user) => (
         // Verify password matches
-        Promise.all([user, password.verify(currentPassword, user.password)])
+        password.verify(currentPassword, user.password)
       ))
-      .then((response) => {
+      .then((isPasswordMatch) => {
         // If password doesn't match
-        if (!response[1]) {
+        if (!isPasswordMatch) {
           debug('Invalid password');
-          throw new Error('Invalid password');
+          throw new Error('Current password is incorrect');
         }
-
-        // Make sure password and verifyPassword are the same
-        if (pw !== verifyPassword) {
-          throw new Error('Passwords must match');
-        }
-
         // Hash password
         return password.hash(pw)
           .then(hash => {
