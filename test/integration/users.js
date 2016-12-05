@@ -176,7 +176,9 @@ describe('/users router', () => {
             'isConfirmed',
             'createdAt',
             'confirmationToken',
-            'confirmationTokenExpiry'
+            'confirmationTokenExpiry',
+            'dailyStreak',
+            'lastSession'
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
