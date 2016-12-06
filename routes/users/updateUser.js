@@ -34,6 +34,11 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       body.birthdate = new Date(body.birthdate);
     }
 
+    // Ensure lastSession gets saved as ISODate by making it a JS Date object
+    if (body.lastSession) {
+      body.lastSession = new Date(body.lastSession);
+    }
+
     if (pw || verifyPassword) {
       // Make sure password and verifyPassword are the same
       if (pw !== verifyPassword) {
