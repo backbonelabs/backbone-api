@@ -3,6 +3,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import dbManager from './lib/dbManager';
 import authRouter from './routes/auth';
+import firmwareRouter from './routes/firmware';
 import supportRouter from './routes/support';
 import usersRouter from './routes/users';
 
@@ -25,6 +26,7 @@ export default dbManager.init({ url: process.env.BL_DATABASE_URL })
   .then(() => {
     // Register route handlers
     app.use('/auth', authRouter);
+    app.use('/firmware', firmwareRouter);
     app.use('/support', supportRouter);
     app.use('/users', usersRouter);
 
