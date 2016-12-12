@@ -16,7 +16,9 @@ export default (req, res) => validate(req.query, { token: schemas.token },
   .then(() => (
     dbManager.getDb()
       .collection('users')
-      .findOne({ passwordResetToken: req.query.token })
+      .find({ passwordResetToken: req.query.token })
+      .limit(1)
+      .next()
   ))
   .then(user => {
     if (!user) {

@@ -85,7 +85,9 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     if (email) {
       return dbManager.getDb()
       .collection('users')
-      .findOne({ email })
+      .find({ email })
+      .limit(1)
+      .next()
       .then(user => {
         if (user) {
           throw new Error('Email already taken');
