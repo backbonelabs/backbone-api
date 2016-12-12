@@ -12,7 +12,9 @@ export default req => {
   const id = req.params.id;
   return dbManager.getDb()
     .collection('users')
-    .findOne({ _id: dbManager.mongodb.ObjectId(id) })
+    .find({ _id: dbManager.mongodb.ObjectId(id) })
+    .limit(1)
+    .next()
     .then(user => {
       if (user) {
         // Return user object without password
