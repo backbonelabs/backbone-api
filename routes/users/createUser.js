@@ -30,7 +30,9 @@ export default req => validate(req.body, {
     // Check if there is already a user with this email
     dbManager.getDb()
       .collection('users')
-      .findOne({ email: req.body.email })
+      .find({ email: req.body.email })
+      .limit(1)
+      .next()
       .then(user => {
         if (user) {
           // Email is already associated to a confirmed user

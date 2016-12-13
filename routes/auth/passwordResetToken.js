@@ -19,7 +19,9 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
-    .findOne({ email: req.body.email })
+    .find({ email: req.body.email })
+    .limit(1)
+    .next()
   ))
   .then((user) => {
     if (!user) {
