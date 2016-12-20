@@ -378,7 +378,7 @@ describe('/users router', () => {
     });
 
     it('should update settings', done => {
-      const postureThreshold = 0.5;
+      const postureThreshold = 0.25;
       assertRequest({ postureThreshold })
         .expect(200)
         .expect(res => {
