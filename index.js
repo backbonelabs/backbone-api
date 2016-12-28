@@ -22,7 +22,14 @@ app.use('/ping', (req, res) => {
 });
 
 // Initialize database connection
-export default dbManager.init({ url: process.env.BL_DATABASE_URL })
+export default dbManager.init({
+  url: process.env.BL_DATABASE_URL,
+  options: {
+    db: {
+      readPreference: dbManager.mongodb.ReadPreference.PRIMARY_PREFERRED,
+    },
+  },
+})
   .then(() => {
     // Register route handlers
     app.use('/auth', authRouter);
