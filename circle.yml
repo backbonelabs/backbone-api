@@ -33,3 +33,28 @@ test:
   override:
     - npm run lint
     - npm test
+deployment:
+  staging:
+    branch: master
+    codedeploy:
+      backbone-api:
+        application_root: /
+        revision_location:
+          revision_type: S3
+          s3_location:
+            bucket: elasticbeanstalk-us-west-2-901560206111
+            key_pattern: backbone-api/app-{SHORT_COMMIT}-{BUILD_NUM}
+        region: us-west-2
+        deployment_group: staging
+  production:
+    branch: production
+    codedeploy:
+      backbone-api:
+        application_root: /
+        revision_location:
+          revision_type: S3
+          s3_location:
+            bucket: elasticbeanstalk-us-west-2-901560206111
+            key_pattern: backbone-api/app-{SHORT_COMMIT}-{BUILD_NUM}
+        region: us-west-2
+        deployment_group: production
