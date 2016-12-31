@@ -21,6 +21,10 @@ app.use('/ping', (req, res) => {
   res.send('pong');
 });
 
+app.use('/ping2', (req, res) => {
+  res.send('pong2');
+});
+
 // Initialize database connection
 export default dbManager.init({
   url: process.env.BL_DATABASE_URL,
