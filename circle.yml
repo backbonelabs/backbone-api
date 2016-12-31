@@ -35,7 +35,7 @@ test:
     - npm test
 deployment:
   staging:
-    branch: master
+    branch: circleci-codedeploy
     codedeploy:
       backbone-api:
         application_root: /
