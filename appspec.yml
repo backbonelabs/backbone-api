@@ -3,3 +3,7 @@ os: linux
 files:
   - source: /
     destination: /var/app/current
+hooks:
+  BeforeInstall:
+    - location: codedeploy.sh
+      timeout: 30
