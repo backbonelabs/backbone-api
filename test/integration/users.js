@@ -282,7 +282,7 @@ describe('/users router', () => {
     it('should not allow forbidden fields', done => {
       assertRequest({ _id: 'abc123' })
         .expect(400)
-        .expect({ error: 'child "_id" fails because ["_id" is not allowed]' })
+        .expect({ error: '"_id" is not allowed' })
         .end(done);
     });
 
