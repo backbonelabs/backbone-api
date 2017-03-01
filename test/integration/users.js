@@ -13,16 +13,12 @@ let emailUtility;
 let app;
 let db;
 let userFixture = {};
-let confirmedUserFixture;
-let unconfirmedUserFixture;
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
-const testEmail2 = `test.${randomString()}@${randomString()}.com`;
-const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
-const testAccessToken = 'testAccessToken';
+const testAccessToken = randomString({ length: 64 });
 const userIdsToDelete = [];
 const accessTokensToDelete = [testAccessToken];
 
@@ -41,30 +37,19 @@ before(() => Promise.resolve(server)
         email: testEmail1,
         password: testPasswordHash,
       }),
-      {
-        email: testEmail2,
-        password: testPasswordHash,
-        isConfirmed: true,
-      },
-      {
-        email: testEmail3,
-        password: testPasswordHash,
-        isConfirmed: false,
-      },
     ])
   ))
   .then(results => {
     const { ops } = results;
     userFixture = ops[0];
-    confirmedUserFixture = ops[1];
-    unconfirmedUserFixture = ops[2];
-
-    [userFixture, confirmedUserFixture, unconfirmedUserFixture].forEach(value => {
-      value._id = value._id.toHexString();
-      userIdsToDelete.push(value._id);
-    });
+    userFixture._id = userFixture._id.toHexString();
+    userIdsToDelete.push(userFixture._id);
   })
-  .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
+  .then(() => db.collection('accessTokens')
+    .insertOne({
+      userId: mongodb.ObjectID(userFixture._id),
+      accessToken: testAccessToken,
+    }))
 );
 
 after(() => db.collection('accessTokens')
@@ -222,12 +207,12 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should respond with a 400 on an invalid id', done => {
+    it('should respond with a 401 if access token does not belong to the user id', done => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456`)
         .set('Authorization', `Bearer ${testAccessToken}`)
-        .expect(400)
-        .expect({ error: 'No user found' })
+        .expect(401)
+        .expect({ error: 'Invalid credentials' })
         .end(done);
     });
 
@@ -286,13 +271,13 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should not update or create users for an invalid id', done => {
+    it('should not update users if access token does not belong to the user id', done => {
       request(app)
         .post('/users/123456789012')
         .set('Authorization', `Bearer ${testAccessToken}`)
         .send({ email: 'new@email.com' })
-        .expect(400)
-        .expect({ error: 'Invalid user' })
+        .expect(401)
+        .expect({ error: 'Invalid credentials' })
         .end(done);
     });
 
