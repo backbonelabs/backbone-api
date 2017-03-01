@@ -1,13 +1,17 @@
 import request from 'request-promise';
+import errors from 'request-promise/errors';
+
 import Debug from 'debug';
 
 const debug = Debug('routes:users:getUserSessions');
 
 /**
  * Returns user posture sessions for the given dates
- * @param  {Object} req           Request
- * @param  {Object} req.params    Request parameters
- * @param  {String} req.params.id User ID
+ * @param  {Object} req             Request
+ * @param  {Object} req.params      Request parameters
+ * @param  {String} req.query.from  Date
+ * @param  {String} req.query.to    Date
+ * @param  {String} req.params.id   User ID
  * @return {Promise} Resolves with the sessions object
  */
 
@@ -15,21 +19,24 @@ export default req => {
   const { id } = req.params;
   const { from, to } = req.query;
 
-  const script = `function main() {
-      return Events({
-        from_date: ${JSON.stringify(from)},
-        to_date: ${JSON.stringify(to)},
-      }).filter((event) => {
-        return (event.name == 'postureSession') && (event.distinct_id === ${JSON.stringify(id)});
-      });
-    }`;
+/* eslint-disable */
+  const script = function main() {
+    return Events({
+      from_date: params.from_date,
+      to_date: params.to_date,
+    }).filter((event) => {
+      return (event.name === 'postureSession') && (event.distinct_id === params.id);
+    });
+  };
+/* eslint-disable */
 
   return request.post('https://mixpanel.com/api/2.0/jql/', {
     form: {
-      script,
+      script: script.toString(),
       params: JSON.stringify({
         from_date: from,
         to_date: to,
+        id,
       }),
     },
     headers: { 'Cache-control': 'no-cache' },
@@ -37,31 +44,23 @@ export default req => {
     json: true,
   })
   .then((response) => {
-    let seen = {};
-    // Sort the sessions
-    // Merge the all the sessions with the same date
-    const groupByDay = response
-      .sort((a, b) => b.time - a.time) // sort from latest to oldest
-      .filter((val) => {
-        const date = new Date(val.time);
-
-        if (new Date(seen.time).toDateString() === (date.toDateString())) {
-          seen.properties.sessionTime += val.properties.sessionTime;
-          seen.properties.slouchTime += val.properties.slouchTime;
-          seen.properties.totalDuration += val.properties.totalDuration;
-          // Don't keep this value, It's merged
-          return false;
-        }
-
-        // remember this obj
-        seen = val;
-        return true;
-      });
-
-    return groupByDay;
+    return response.map((val) => {
+      return {
+        timestamp: val.time,
+        sessionTime: val.properties.sessionTime,
+        slouchTime: val.properties.slouchTime,
+        totalDuration: val.properties.totalDuration,
+      }
+    });
   })
-  .catch((error) => {
-    debug('Failed to fetch sessions ', error.message);
-    throw new Error(error.message);
+  .catch(errors.StatusCodeError, (reason) => {
+    // The server responded with a status codes other than 2xx.
+    debug('Failed to fetch sessions ', reason.message);
+    throw new Error(reason.error.message)
+  })
+  .catch(errors.RequestError, (reason) => {
+    // The request failed due to technical reasons.
+    debug('Failed to fetch sessions ', reason.message);
+    throw new Error(reason.message)
   });
 };
