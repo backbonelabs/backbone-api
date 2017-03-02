@@ -160,6 +160,7 @@ describe('/users router', () => {
             'weightUnitPreference',
             'birthdate',
             'hasOnboarded',
+            'seenBaselineSurvey',
             'lastName',
             'settings',
             'isConfirmed',
