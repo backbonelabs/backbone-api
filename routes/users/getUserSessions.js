@@ -15,7 +15,7 @@ const debug = Debug('routes:users:getUserSessions');
  * @return {Promise} Resolves with the sessions object
  */
 
-export default req => {
+export default (req, res) => {
   const { id } = req.params;
   const { from, to } = req.query;
 
