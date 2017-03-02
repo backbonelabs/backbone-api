@@ -55,12 +55,17 @@ export default req => {
   })
   .catch(errors.StatusCodeError, (reason) => {
     // The server responded with a status codes other than 2xx.
-    debug('Failed to fetch sessions ', reason.message);
-    throw new Error(reason.error.message)
+    debug('Failed to fetch sessions StatusCodeError', reason.statusCode, reason.message);
+    throw new Error(reason.message)
   })
   .catch(errors.RequestError, (reason) => {
     // The request failed due to technical reasons.
-    debug('Failed to fetch sessions ', reason.message);
+    debug('Failed to fetch sessions RequestError', reason.message);
     throw new Error(reason.message)
+  })
+  .catch(err => {
+    // Return generic error message to hide details about specific Mixpanel errors
+    res.status(500);
+    throw new Error('Could not retrieve session data');
   });
 };
