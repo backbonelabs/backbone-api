@@ -5,16 +5,16 @@ import server from '../../index';
 let app;
 
 before(() => Promise.resolve(server)
-  .then(expressApp => {
+  .then((expressApp) => {
     app = expressApp;
   })
-  .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+  .then(() => MongoClient.connect(process.env.BL_DATABASE_URL)),
 );
 
 describe('/firmware router', () => {
   describe('GET /', () => {
     const url = '/firmware';
-    it('should return the latest firmware details', done => {
+    it('should return the latest firmware details', (done) => {
       request(app)
         .get(url)
         .send({})

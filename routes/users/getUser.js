@@ -8,14 +8,14 @@ import sanitizeUser from '../../lib/sanitizeUser';
  * @param  {String} req.params.id User ID
  * @return {Promise} Resolves with the user object, sans password
  */
-export default req => {
+export default (req) => {
   const id = req.params.id;
   return dbManager.getDb()
     .collection('users')
     .find({ _id: dbManager.mongodb.ObjectId(id) })
     .limit(1)
     .next()
-    .then(user => {
+    .then((user) => {
       if (user) {
         // Return user object without password
         return sanitizeUser(user);

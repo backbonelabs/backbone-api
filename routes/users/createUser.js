@@ -33,7 +33,7 @@ export default req => validate(req.body, {
       .find({ email: req.body.email })
       .limit(1)
       .next()
-      .then(user => {
+      .then((user) => {
         if (user) {
           // Email is already associated to a confirmed user
           throw new Error('Email is not available');
@@ -56,7 +56,7 @@ export default req => validate(req.body, {
             confirmationToken,
             confirmationTokenExpiry,
           }))
-          .then(result => {
+          .then((result) => {
             // Initiate sending of user confirmation email
             const emailUtility = EmailUtility.getMailer();
             return emailUtility.sendConfirmationEmail(result.ops[0].email, confirmationToken)

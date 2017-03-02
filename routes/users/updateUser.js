@@ -26,7 +26,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       password: pw,
       verifyPassword,
       currentPassword,
-      ...body,
+      ...body
     } = req.body;
 
     // Ensure birthdate gets saved as ISODate by making it a JS Date object
@@ -57,7 +57,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
           debug('Did not find user by id', req.params.id);
           throw new Error('Invalid user id');
         })
-      .then((user) => (
+      .then(user => (
         // Verify password matches
         password.verify(currentPassword, user.password)
       ))
@@ -69,7 +69,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
         }
         // Hash password
         return password.hash(pw)
-          .then(hash => {
+          .then((hash) => {
             body.password = hash;
             return body;
           });
@@ -78,7 +78,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
 
     return body;
   })
-  .then(body => {
+  .then((body) => {
     const { email } = body;
 
     // Check if email is already taken
@@ -88,7 +88,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       .find({ email })
       .limit(1)
       .next()
-      .then(user => {
+      .then((user) => {
         if (user) {
           throw new Error('Email already taken');
         }
@@ -112,10 +112,10 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
       .findOneAndUpdate(
         { _id: dbManager.mongodb.ObjectID(req.params.id) },
         { $set: updateFields },
-        { returnOriginal: false }
+        { returnOriginal: false },
       )
   ))
-  .then(user => {
+  .then((user) => {
     if (!user.value) {
       // User ID doesn't exist
       throw new Error('Invalid user');

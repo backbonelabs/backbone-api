@@ -14,7 +14,7 @@ export default req => new Promise((resolve, reject) => {
   dbManager.getDb()
     .collection('accessTokens')
     .remove({ accessToken })
-    .then(results => {
+    .then((results) => {
       if (results.result.n) {
         // Access token matched an entry in the database and was removed
         resolve({});

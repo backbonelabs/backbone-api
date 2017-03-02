@@ -17,35 +17,38 @@ const testEmail = `test.${randomString()}@${randomString()}.com`;
 const testAccessToken = 'testAccessToken';
 const userIdsToDelete = [];
 
-before(() => Promise.resolve(server)
-  .then(expressApp => {
-    app = expressApp;
-  })
-  .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-  .then(mDb => {
-    db = mDb;
-  })
-  .then(() => db.collection('users')
-    .insertOne(mergeWithDefaultData({
-      email: testEmail,
+before(() => (
+  Promise.resolve(server)
+    .then((expressApp) => {
+      app = expressApp;
+    })
+    .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+    .then((mDb) => {
+      db = mDb;
+    })
+    .then(() => (
+      db.collection('users')
+        .insertOne(mergeWithDefaultData({
+          email: testEmail,
+        }))
+    ))
+    .then((result) => {
+      const { ops } = result;
+      userFixture = ops[0];
+
+      userFixture._id = userFixture._id.toHexString();
+      userIdsToDelete.push(userFixture._id);
+    })
+    .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
+));
+
+after(() => (
+  db.collection('accessTokens')
+    .deleteOne({ accessToken: testAccessToken })
+    .then(() => db.collection('users').deleteOne({
+      _id: mongodb.ObjectID(userFixture._id),
     }))
-  )
-  .then(result => {
-    const { ops } = result;
-    userFixture = ops[0];
-
-    userFixture._id = userFixture._id.toHexString();
-    userIdsToDelete.push(userFixture._id);
-  })
-  .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
-);
-
-after(() => db.collection('accessTokens')
-  .deleteOne({ accessToken: testAccessToken })
-  .then(() => db.collection('users').deleteOne({
-    _id: mongodb.ObjectID(userFixture._id),
-  }))
-);
+));
 
 describe('/support router', () => {
   let sendSupportEmailStub;
@@ -79,7 +82,7 @@ describe('/support router', () => {
         });
     });
 
-    it('should respond with 401 on missing authorization credentials', done => {
+    it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
         .post(url)
         .send({})
@@ -88,7 +91,7 @@ describe('/support router', () => {
         .end(done);
     });
 
-    it('should respond with 401 on invalid access token', done => {
+    it('should respond with 401 on invalid access token', (done) => {
       request(app)
         .post(url)
         .set('Authorization', 'Bearer 123')
@@ -129,7 +132,7 @@ describe('/support router', () => {
         .then(res => expect(res.body.error).to.exist)
     ));
 
-    it('should send the support email', done => {
+    it('should send the support email', (done) => {
       request(app)
         .post(url)
         .set('Authorization', `Bearer ${testAccessToken}`)
@@ -138,7 +141,7 @@ describe('/support router', () => {
           message: supportMessage,
         })
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           expect(res.body).to.deep.equal({});
           expect(sendSupportEmailStub.callCount).to.equal(1);
           expect(sendSupportEmailStub.calledWith(testEmail)).to.be.true;

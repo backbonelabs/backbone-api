@@ -22,7 +22,7 @@ export default (req, res) => validate(req.query, { token: schemas.token },
     .limit(1)
     .next()
   ))
-  .then(user => {
+  .then((user) => {
     if (!user) {
       throw new Error('Invalid email confirmation request');
     } else if (new Date() > user.confirmationTokenExpiry) {
@@ -32,7 +32,7 @@ export default (req, res) => validate(req.query, { token: schemas.token },
       .collection('users')
       .findOneAndUpdate(
         { _id: user._id },
-        { $set: { isConfirmed: true } }
+        { $set: { isConfirmed: true } },
       );
     }
   })

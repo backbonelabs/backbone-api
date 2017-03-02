@@ -22,44 +22,48 @@ const testAccessToken = randomString({ length: 64 });
 const userIdsToDelete = [];
 const accessTokensToDelete = [testAccessToken];
 
-before(() => Promise.resolve(server)
-  .then(expressApp => {
-    app = expressApp;
-  })
-  .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-  .then(mDb => {
-    db = mDb;
-  })
-  .then(() => (
-    db.collection('users')
-    .insertMany([
-      mergeWithDefaultData({
-        email: testEmail1,
-        password: testPasswordHash,
-      }),
-    ])
-  ))
-  .then(results => {
-    const { ops } = results;
-    userFixture = ops[0];
-    userFixture._id = userFixture._id.toHexString();
-    userIdsToDelete.push(userFixture._id);
-  })
-  .then(() => db.collection('accessTokens')
-    .insertOne({
-      userId: mongodb.ObjectID(userFixture._id),
-      accessToken: testAccessToken,
-    }))
-);
+before(() => (
+  Promise.resolve(server)
+    .then((expressApp) => {
+      app = expressApp;
+    })
+    .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+    .then((mDb) => {
+      db = mDb;
+    })
+    .then(() => (
+      db.collection('users')
+      .insertMany([
+        mergeWithDefaultData({
+          email: testEmail1,
+          password: testPasswordHash,
+        }),
+      ])
+    ))
+    .then((results) => {
+      const { ops } = results;
+      userFixture = ops[0];
+      userFixture._id = userFixture._id.toHexString();
+      userIdsToDelete.push(userFixture._id);
+    })
+    .then(() => (
+      db.collection('accessTokens')
+        .insertOne({
+          userId: mongodb.ObjectID(userFixture._id),
+          accessToken: testAccessToken,
+        })
+    ))
+));
 
-after(() => db.collection('accessTokens')
-  .deleteMany({ accessToken: { $in: accessTokensToDelete } })
-  .then(() => db.collection('users').deleteMany({
-    _id: {
-      $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
-    },
-  }))
-);
+after(() => (
+  db.collection('accessTokens')
+    .deleteMany({ accessToken: { $in: accessTokensToDelete } })
+    .then(() => db.collection('users').deleteMany({
+      _id: {
+        $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
+      },
+    }))
+));
 
 describe('/users router', () => {
   describe('POST /', () => {
@@ -133,7 +137,7 @@ describe('/users router', () => {
       password: testPassword,
     }));
 
-    it('should create a new user', done => {
+    it('should create a new user', (done) => {
       request(app)
         .post(url)
         .send({
@@ -141,7 +145,7 @@ describe('/users router', () => {
           password: testPassword,
         })
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           expect(res.body).to.be.ok;
           expect(res.body).to.have.all.keys('user', 'accessToken');
           expect(res.body.user).to.have.all.keys(
@@ -164,7 +168,7 @@ describe('/users router', () => {
             'confirmationToken',
             'confirmationTokenExpiry',
             'dailyStreak',
-            'lastSession'
+            'lastSession',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -174,7 +178,7 @@ describe('/users router', () => {
             'phoneVibration',
             'vibrationStrength',
             'vibrationPattern',
-            'slouchTimeThreshold'
+            'slouchTimeThreshold',
           );
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
@@ -191,7 +195,7 @@ describe('/users router', () => {
   describe('GET /:id', () => {
     const url = '/users';
 
-    it('should respond with 401 on missing authorization credentials', done => {
+    it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
         .get(`${url}/${userFixture._id}`)
         .send({})
@@ -199,7 +203,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should respond with 401 on invalid access token', done => {
+    it('should respond with 401 on invalid access token', (done) => {
       request(app)
         .get(`${url}/${userFixture._id}`)
         .set('Authorization', 'Bearer 123')
@@ -208,7 +212,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should respond with a 401 if access token does not belong to the user id', done => {
+    it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456`)
         .set('Authorization', `Bearer ${testAccessToken}`)
@@ -217,12 +221,12 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should return a user object without password data', done => {
+    it('should return a user object without password data', (done) => {
       request(app)
         .get(`${url}/${userFixture._id}`)
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           expect(res.body).to.not.have.ownProperty('password');
         })
         .end(done);
@@ -232,7 +236,7 @@ describe('/users router', () => {
   describe('POST /:id', () => {
     let url;
 
-    const assertRequest = (body) => request(app)
+    const assertRequest = body => request(app)
       .post(url)
       .set('Authorization', `Bearer ${testAccessToken}`)
       .send(body);
@@ -241,7 +245,7 @@ describe('/users router', () => {
       url = `/users/${userFixture._id}`;
     });
 
-    it('should respond with 401 on missing authorization credentials', done => {
+    it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
         .post(url)
         .send({})
@@ -249,7 +253,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should respond with 401 on invalid access token', done => {
+    it('should respond with 401 on invalid access token', (done) => {
       request(app)
         .post(url)
         .set('Authorization', 'Bearer 123')
@@ -258,21 +262,21 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should not allow unknown fields', done => {
+    it('should not allow unknown fields', (done) => {
       assertRequest({ foo: 'bar' })
         .expect(400)
         .expect({ error: '"foo" is not allowed' })
         .end(done);
     });
 
-    it('should not allow forbidden fields', done => {
+    it('should not allow forbidden fields', (done) => {
       assertRequest({ _id: 'abc123' })
         .expect(400)
         .expect({ error: '"_id" is not allowed' })
         .end(done);
     });
 
-    it('should not update users if access token does not belong to the user id', done => {
+    it('should not update users if access token does not belong to the user id', (done) => {
       request(app)
         .post('/users/123456789012')
         .set('Authorization', `Bearer ${testAccessToken}`)
@@ -282,11 +286,11 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should update non-password fields', done => {
+    it('should update non-password fields', (done) => {
       const newEmail = `aaa${userFixture.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           const { body } = res;
           expect(body._id).to.equal(userFixture._id);
           expect(body.email).to.equal(newEmail);
@@ -304,7 +308,7 @@ describe('/users router', () => {
           verifyPassword: newPassword,
         })
           .expect(200)
-          .expect(res => {
+          .expect((res) => {
             const { body } = res;
             expect(body._id).to.equal(userFixture._id);
             expect(body.password).to.not.exist;
@@ -317,11 +321,12 @@ describe('/users router', () => {
             }
           });
       })
-        .then(() => db.collection('users')
-          .findOne({ _id: mongodb.ObjectID(userFixture._id) })
-        )
+        .then(() => (
+          db.collection('users')
+            .findOne({ _id: mongodb.ObjectID(userFixture._id) })
+        ))
         .then(user => bcrypt.compareSync(newPassword, user.password))
-        .then(isPasswordMatches => {
+        .then((isPasswordMatches) => {
           expect(isPasswordMatches).to.be.true;
         });
     });
@@ -330,7 +335,7 @@ describe('/users router', () => {
   describe('POST /settings/:id', () => {
     let url;
 
-    const assertRequest = (body) => request(app)
+    const assertRequest = body => request(app)
       .post(url)
       .set('Authorization', `Bearer ${testAccessToken}`)
       .send(body);
@@ -339,7 +344,7 @@ describe('/users router', () => {
       url = `/users/settings/${userFixture._id}`;
     });
 
-    it('should respond with 401 on missing authorization credentials', done => {
+    it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
         .post(url)
         .send({})
@@ -347,7 +352,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should respond with 401 on invalid access token', done => {
+    it('should respond with 401 on invalid access token', (done) => {
       request(app)
         .post(url)
         .set('Authorization', 'Bearer 123')
@@ -356,18 +361,18 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should not allow unknown fields', done => {
+    it('should not allow unknown fields', (done) => {
       assertRequest({ foo: 'bar' })
         .expect(400)
         .expect({ error: '"foo" is not allowed' })
         .end(done);
     });
 
-    it('should update settings', done => {
+    it('should update settings', (done) => {
       const postureThreshold = 0.25;
       assertRequest({ postureThreshold })
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           const { body } = res;
           expect(body.postureThreshold).to.equal(postureThreshold);
         })

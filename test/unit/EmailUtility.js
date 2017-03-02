@@ -47,7 +47,7 @@ describe('EmailUtility', () => {
       }));
 
       return emailUtility.sendEmail({}, 'test@gobackbone.com')
-        .then(results => {
+        .then((results) => {
           expect(results).to.be.undefined;
           expect(emailSendStub.callCount).to.equal(0);
         });

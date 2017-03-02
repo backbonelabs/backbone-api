@@ -20,7 +20,7 @@ export default (req, res) => validate(req.query, { token: schemas.token },
       .limit(1)
       .next()
   ))
-  .then(user => {
+  .then((user) => {
     if (!user) {
       throw new Error('Invalid password reset request');
     } else if (new Date() > user.passwordResetTokenExpiry) {
@@ -33,7 +33,7 @@ export default (req, res) => validate(req.query, { token: schemas.token },
         .collection('users')
         .findOneAndUpdate(
           { _id: user._id },
-          { $unset: { passwordResetToken, passwordResetTokenExpiry } }
+          { $unset: { passwordResetToken, passwordResetTokenExpiry } },
         );
     }
   })

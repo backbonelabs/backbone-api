@@ -25,7 +25,7 @@ export default req => validate(req.body, {
       .find({ _id: dbManager.mongodb.ObjectId(req.body._id) })
       .limit(1)
       .next()
-      .then(user => {
+      .then((user) => {
         if (user) {
           debug('Found user by id', user);
           return user;
@@ -34,7 +34,7 @@ export default req => validate(req.body, {
         throw new Error('Invalid user');
       })
   ))
-  .then(user => {
+  .then((user) => {
     // Send email to support inbox
     const emailUtility = EmailUtility.getMailer();
     return emailUtility.sendSupportEmail(user.email, req.body.message);
