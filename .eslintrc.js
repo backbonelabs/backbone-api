@@ -2,6 +2,7 @@ module.exports = {
   extends: 'airbnb-base',
   parserOptions: {
     ecmaFeatures: {
+      ecmaVersion: 6,
       experimentalObjectRestSpread: true
     }
   },
@@ -12,5 +13,12 @@ module.exports = {
     'no-console': [1],
     'no-underscore-dangle': [0],
     'prefer-template': [1],
+    'comma-dangle': [2, {
+      arrays: 'always-multiline',
+      objects: 'always-multiline',
+      imports: 'always-multiline',
+      exports: 'always-multiline',
+      functions: 'ignore',
+    }],
   }
 };
