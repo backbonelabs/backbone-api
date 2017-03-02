@@ -32,13 +32,12 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
         .then(([passwordResetToken, passwordResetTokenExpiry]) => (
           dbManager.getDb()
             .collection('users')
-            .findOneAndUpdate(
-              { email: req.body.email },
-              { $set: {
+            .findOneAndUpdate({ email: req.body.email }, {
+              $set: {
                 passwordResetToken,
                 passwordResetTokenExpiry,
-              } }
-            )
+              },
+            })
             .then((updatedUser) => {
               const emailUtility = EmailUtility.getMailer();
               return emailUtility

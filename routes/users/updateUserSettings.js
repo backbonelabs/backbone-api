@@ -16,10 +16,10 @@ export default req => validate(req.body, schemas.settings)
       .findOneAndUpdate(
         { _id: dbManager.mongodb.ObjectID(req.params.id) },
         { $set: settings },
-        { returnOriginal: false }
+        { returnOriginal: false },
       );
   })
-  .then(result => {
+  .then((result) => {
     if (!result.value) {
       // User ID doesn't exist
       throw new Error('Invalid user');

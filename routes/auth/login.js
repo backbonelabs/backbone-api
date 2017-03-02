@@ -44,7 +44,7 @@ export default (req, res) => validate(req.body, {
         throw new Error(errorMessage);
       });
   })
-  .then((user) => (
+  .then(user => (
     // Verify password matches
     Promise.all([user, passwordUtil.verify(req.body.password, user.password)])
   ))

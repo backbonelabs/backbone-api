@@ -26,48 +26,48 @@ const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const accessTokensToDelete = [];
 
 before(() => Promise.resolve(server)
-  .then(expressApp => {
+  .then((expressApp) => {
     app = expressApp;
   })
   .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-  .then(mDb => {
+  .then((mDb) => {
     db = mDb;
   })
-  .then(() =>
+  .then(() => (
     tokenFactory.generateToken()
-    .then(([token, tokenExpiry]) => {
-      const expiredToken = randomString({ length: 40 });
-      const expiredTokenExpiry = new Date();
-      expiredTokenExpiry.setDate(expiredTokenExpiry.getDate() - 1);
+      .then(([token, tokenExpiry]) => {
+        const expiredToken = randomString({ length: 40 });
+        const expiredTokenExpiry = new Date();
+        expiredTokenExpiry.setDate(expiredTokenExpiry.getDate() - 1);
 
-      return db.collection('users')
-        .insertMany([{
-          email: testEmail1,
-          password: testPasswordHash,
-        }, {
-          email: testEmail2,
-          password: testPasswordHash,
-          isConfirmed: true,
-        }, {
-          email: testEmail3,
-          password: testPasswordHash,
-          isConfirmed: false,
-          passwordResetToken: token,
-          passwordResetTokenExpiry: tokenExpiry,
-          confirmationToken: token,
-          confirmationTokenExpiry: tokenExpiry,
-        }, {
-          email: testEmail4,
-          password: testPasswordHash,
-          isConfirmed: false,
-          passwordResetToken: expiredToken,
-          passwordResetTokenExpiry: expiredTokenExpiry,
-          confirmationToken: expiredToken,
-          confirmationTokenExpiry: expiredTokenExpiry,
-        }]);
-    })
-  )
-  .then(results => {
+        return db.collection('users')
+          .insertMany([{
+            email: testEmail1,
+            password: testPasswordHash,
+          }, {
+            email: testEmail2,
+            password: testPasswordHash,
+            isConfirmed: true,
+          }, {
+            email: testEmail3,
+            password: testPasswordHash,
+            isConfirmed: false,
+            passwordResetToken: token,
+            passwordResetTokenExpiry: tokenExpiry,
+            confirmationToken: token,
+            confirmationTokenExpiry: tokenExpiry,
+          }, {
+            email: testEmail4,
+            password: testPasswordHash,
+            isConfirmed: false,
+            passwordResetToken: expiredToken,
+            passwordResetTokenExpiry: expiredTokenExpiry,
+            confirmationToken: expiredToken,
+            confirmationTokenExpiry: expiredTokenExpiry,
+          }]);
+      })
+  ))
+  .then((results) => {
     const { ops } = results;
 
     // QUESTION: Do we need this? Tests pass
@@ -84,29 +84,29 @@ before(() => Promise.resolve(server)
     .insertOne({
       userId: mongodb.ObjectID(confirmedUserFixture._id),
       accessToken: randomString({ length: 64 }),
-    })
+    }),
   )
-  .then(results => {
+  .then((results) => {
     accessTokenFixture = results.ops[0];
     accessTokenFixture.userId = accessTokenFixture.userId.toHexString();
     accessTokensToDelete.push(accessTokenFixture.accessToken);
-  })
+  }),
 );
 
 after(() => db.collection('accessTokens')
   .deleteMany({ accessToken: { $in: accessTokensToDelete } })
-  .then(() => db.collection('users')
-    .deleteMany({
-      _id: {
-        $in: [
-          mongodb.ObjectID(unconfirmedUserFixture._id),
-          mongodb.ObjectID(confirmedUserFixture._id),
-          mongodb.ObjectID(validTokenUserFixture._id),
-          mongodb.ObjectID(invalidTokenUserFixture._id),
-        ],
-      },
-    })
-  )
+    .then(() => db.collection('users')
+      .deleteMany({
+        _id: {
+          $in: [
+            mongodb.ObjectID(unconfirmedUserFixture._id),
+            mongodb.ObjectID(confirmedUserFixture._id),
+            mongodb.ObjectID(validTokenUserFixture._id),
+            mongodb.ObjectID(invalidTokenUserFixture._id),
+          ],
+        },
+      }),
+  ),
 );
 
 describe('/auth router', () => {
@@ -158,7 +158,7 @@ describe('/auth router', () => {
       password: `${testPassword}1`,
     }));
 
-    it('should return user profile and access token on valid email/password combination', done => {
+    it('should return user profile and access token on valid email/password combination', (done) => {
       request(app)
         .post(url)
         .send({
@@ -166,7 +166,7 @@ describe('/auth router', () => {
           password: testPassword,
         })
         .expect(200)
-        .expect(res => {
+        .expect((res) => {
           expect(res.body).to.contain.all.keys(['_id', 'email', 'accessToken']);
           expect(res.body).to.not.contain.all.keys(['password']);
           expect(res.body.accessToken.length).to.equal(64);
@@ -183,14 +183,14 @@ describe('/auth router', () => {
   describe('POST /logout', () => {
     const url = '/auth/logout';
 
-    it('should require authorization header', done => {
+    it('should require authorization header', (done) => {
       request(app)
         .post(url)
         .expect(401)
         .end(done);
     });
 
-    it('should require bearer authorization scheme', done => {
+    it('should require bearer authorization scheme', (done) => {
       request(app)
         .post(url)
         .set('Authorization', `Basic ${accessTokensToDelete[1]}`)

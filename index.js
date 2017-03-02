@@ -43,7 +43,7 @@ export default dbManager.init({
     });
     return app;
   })
-  .catch(err => {
+  .catch((err) => {
     debug('Error connecting to database', err);
     throw err;
   });
