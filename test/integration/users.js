@@ -379,4 +379,67 @@ describe('/users router', () => {
         .end(done);
     });
   });
+
+  describe('GET /sessions/:id', () => {
+    const url = '/users/sessions';
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const params = `?from=${yesterday.toISOString()}&to=${today.toISOString()}`;
+
+    it('should respond with 401 on missing authorization credentials', (done) => {
+      request(app)
+        .get(`${url}/${userFixture._id}${params}`)
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with 401 on invalid access token', (done) => {
+      request(app)
+        .get(`${url}/${userFixture._id}${params}`)
+        .set('Authorization', 'Bearer 123')
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with a 401 if access token does not belong to the user id', (done) => {
+      request(app)
+        .get(`${url}/abcdef123456abcdef123456${params}`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(401)
+        .expect({ error: 'Invalid credentials' })
+        .end(done);
+    });
+
+    it('should respond with a 400 if `from` query is not in ISO 8601', (done) => {
+      const fromDate = `${yesterday.getMonth() + 1}-${yesterday.getDate()}-${yesterday.getFullYear()}`;
+      request(app)
+        .get(`${url}/${userFixture._id}?from=${fromDate}&to=${today.toISOString()}`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(400)
+        .end(done);
+    });
+
+    it('should respond with a 400 if `to` query is not in ISO 8601', (done) => {
+      const toDate = `${today.getMonth() + 1}-${today.getDate()}-${today.getFullYear()}`;
+      request(app)
+        .get(`${url}/${userFixture._id}?from=${yesterday.toISOString()}&to=${toDate}}`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(400)
+        .end(done);
+    });
+
+    it('should return an array', (done) => {
+      request(app)
+        .get(`${url}/${userFixture._id}${params}`)
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.be.instanceOf(Array);
+        })
+        .end(done);
+    });
+  });
 });
