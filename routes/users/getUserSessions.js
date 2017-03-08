@@ -60,6 +60,8 @@ export default (req, res) => validate(req.query, {
     })
     .then((response) => {
       return response.map((event) => {
+        // zone.offset() will figure out whether DST applies for
+        // the given date and will return the correct offset in minutes
         const offsetMinutes = moment.tz.zone('US/Pacific').offset(event.time);
         const offsetMilliseconds = offsetMinutes * 60 * 1000;
         return {
