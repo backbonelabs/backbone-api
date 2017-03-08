@@ -59,12 +59,17 @@ export default (req, res) => validate(req.query, {
       json: true,
     })
     .then((response) => {
-      return response.map((val) => {
+      return response.map((event) => {
+        // zone.offset() will figure out whether DST applies for
+        // the given date and will return the correct offset in minutes
+        const offsetMinutes = moment.tz.zone('US/Pacific').offset(event.time);
+        const offsetMilliseconds = offsetMinutes * 60 * 1000;
         return {
-          timestamp: val.time,
-          sessionTime: val.properties.sessionTime,
-          slouchTime: val.properties.slouchTime,
-          totalDuration: val.properties.totalDuration,
+          // Mixpanel returns times in Pacific timezone, so add offset to get UTC timestamp
+          timestamp: event.time + offsetMilliseconds,
+          sessionTime: event.properties.sessionTime,
+          slouchTime: event.properties.slouchTime,
+          totalDuration: event.properties.totalDuration,
         }
       });
     })
