@@ -162,6 +162,7 @@ describe('/users router', () => {
             'hasOnboarded',
             'seenAppRating',
             'seenBaselineSurvey',
+            'seenFeedbackSurvey',
             'lastName',
             'settings',
             'isConfirmed',
