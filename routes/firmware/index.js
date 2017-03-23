@@ -4,7 +4,7 @@ import handleRoute from '../../lib/handleRoute';
 const router = Router();
 
 // Returns information about the latest firmware
-router.get('/', handleRoute(() => ({
+router.get(/v\d+/, handleRoute(() => ({
   version: process.env.BL_LATEST_FIRMWARE_VERSION,
   url: process.env.BL_LATEST_FIRMWARE_URL,
 })));
