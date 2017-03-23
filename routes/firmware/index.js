@@ -10,7 +10,7 @@ const handleFirmwareVersions = (req, res) => {
     const reqVersion = req.url.match(/\d+/);
     const version = process.env[`BL_LATEST_FIRMWARE_VERSION_${reqVersion}`];
     const baseUrl = process.env.BL_FIRMWARE_URL;
-    const url = `${firmwareUrl}Backbone_${version}.cyacd`;
+    const url = `${baseUrl}Backbone_${version}.cyacd`;
 
     return { version, url };
 };
