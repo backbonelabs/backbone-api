@@ -3,7 +3,8 @@ import handleRoute from '../../lib/handleRoute';
 
 const router = Router();
 
-// Retuns the latest version for a specific version and the file url
+// Returns the latest version for the major software version and the file url
+// from aws
 const handleFirmwareVersions = (req) => {
   // Extracts requested version from URL
   const reqVersion = req.url.match(/\d+/);
@@ -20,7 +21,7 @@ router.get('/', handleRoute(() => ({
   url: process.env.BL_LATEST_FIRMWARE_URL,
 })));
 
-// Returns information for a specific firmware version from URL
+// Route handler for GET request that includes a version number
 router.get(/v\d+/, handleRoute(handleFirmwareVersions));
 
 export default router;
