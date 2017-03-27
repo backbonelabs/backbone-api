@@ -13,25 +13,29 @@ before(() => Promise.resolve(server)
 
 describe('/firmware router', () => {
   describe('GET /', () => {
-    it('should return the latest firmware details', (done) => {
-      const fw = Object.keys(process.env).filter(v => /BL_LATEST_FIRMWARE_VERSION_/.test(v));
-      fw.forEach((v) => {
-        const baseUrl = '/firmware/v';
+    it('response with JSON of latest firmware', (done) => {
+      const baseUrl = '/firmware/v';
+      const baseFileUrl = process.env.BL_FIRMWARE_URL;
+      const firmwareVersions = Object.keys(process.env)
+                                 .filter(v => /BL_LATEST_FIRMWARE_VERSION_/.test(v));
+      const promises = firmwareVersions.map((v) => {
         const firmware = process.env[v];
         const majorSoftwareVersion = firmware.split('.')[2];
         const testUrl = `${baseUrl}${majorSoftwareVersion}`;
-        const baseFileUrl = process.env.BL_FIRMWARE_URL;
         const fileUrl = `${baseFileUrl}Backbone_${firmware}.cyacd`;
-        request(app)
+        return request(app)
           .get(testUrl)
           .send({})
           .expect(200)
           .expect({
             version: firmware,
             url: fileUrl,
-          });
+          })
+          .then();
       });
-      done();
+      Promise.all(promises).then(() => {
+        done();
+      }).catch(reason => done(reason));
     });
   });
 });
