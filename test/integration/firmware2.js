@@ -13,7 +13,7 @@ before(() => Promise.resolve(server)
 
 describe('/firmware router', () => {
   describe('GET /', () => {
-    it('response with JSON of latest firmware', (done) => {
+    it('response with JSON of latest firmware', () => {
       const baseUrl = '/firmware/v';
       const baseFileUrl = process.env.BL_FIRMWARE_URL;
       const firmwareVersions = Object.keys(process.env)
@@ -32,10 +32,10 @@ describe('/firmware router', () => {
             url: fileUrl,
           });
       });
-      Promise.all(promises).then(() => {
-        done();
-      }).catch(reason => done(reason));
-      // return Promise.all(promises);
+      // Promise.all(promises).then(() => {
+      //   done();
+      // }).catch(reason => done(reason));
+      return Promise.all(promises);
     });
   });
 });
