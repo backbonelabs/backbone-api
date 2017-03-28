@@ -4,7 +4,7 @@ import handleRoute from '../../lib/handleRoute';
 const router = Router();
 
 // Returns a RegExp of the avaiable versions from .env for node routing
-const firmwareVersions = () => {
+const avaiableVersions = () => {
   const fw = Object.keys(process.env)
                         .filter(v => v.match(/BL_LATEST_FIRMWARE_VERSION_/))
                         .map(v => v.match(/\d+/)[0]);
@@ -32,6 +32,6 @@ router.get('/', handleRoute(() => ({
 })));
 
 // Route handler for GET request that includes a version number
-router.get(firmwareVersions(), handleRoute(handleFirmwareVersions));
+router.get(avaiableVersions(), handleRoute(handleFirmwareVersions));
 
 export default router;
