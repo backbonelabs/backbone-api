@@ -25,11 +25,8 @@ describe('/firmware router', () => {
         }, done);
     });
   });
-});
-
-describe('/firmware with version router', () => {
-  describe('GET /', () => {
-    it('response with JSON of latest version firmware', () => {
+  describe('GET /vX', () => {
+    it('should return the latest firmware details', () => {
       const baseUrl = '/firmware/v';
       const baseFileUrl = process.env.BL_FIRMWARE_URL;
       const firmwareVersions = Object.keys(process.env)
@@ -51,4 +48,7 @@ describe('/firmware with version router', () => {
       return Promise.all(promises);
     });
   });
+});
+
+describe('/firmware with version router', () => {
 });
