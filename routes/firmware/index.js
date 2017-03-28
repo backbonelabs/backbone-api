@@ -3,6 +3,16 @@ import handleRoute from '../../lib/handleRoute';
 
 const router = Router();
 
+// Returns a RegExp of the avaiable versions from .env for node routing
+const firmwareVersions = () => {
+  const fw = Object.keys(process.env)
+                        .filter(v => v.match(/BL_LATEST_FIRMWARE_VERSION_/))
+                        .map(v => v.match(/\d+/)[0]);
+  fw.unshift('[');
+  fw.push(']');
+  return new RegExp(fw.join(''));
+};
+
 // Returns the latest version for the major software version and the file url
 // from aws
 const handleFirmwareVersions = (req) => {
@@ -22,6 +32,6 @@ router.get('/', handleRoute(() => ({
 })));
 
 // Route handler for GET request that includes a version number
-router.get(/v\d+/, handleRoute(handleFirmwareVersions));
+router.get(firmwareVersions(), handleRoute(handleFirmwareVersions));
 
 export default router;
