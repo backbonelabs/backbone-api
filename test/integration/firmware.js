@@ -49,6 +49,3 @@ describe('/firmware router', () => {
     });
   });
 });
-
-describe('/firmware with version router', () => {
-});
