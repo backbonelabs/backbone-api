@@ -26,3 +26,29 @@ describe('/firmware router', () => {
     });
   });
 });
+
+describe('/firmware with version router', () => {
+  describe('GET /', () => {
+    it('response with JSON of latest version firmware', () => {
+      const baseUrl = '/firmware/v';
+      const baseFileUrl = process.env.BL_FIRMWARE_URL;
+      const firmwareVersions = Object.keys(process.env)
+                                 .filter(v => /BL_LATEST_FIRMWARE_VERSION_/.test(v));
+      const promises = firmwareVersions.map((v) => {
+        const firmware = process.env[v];
+        const majorSoftwareVersion = firmware.split('.')[2];
+        const testUrl = `${baseUrl}${majorSoftwareVersion}`;
+        const fileUrl = `${baseFileUrl}Backbone_${firmware}.cyacd`;
+        return request(app)
+          .get(testUrl)
+          .send({})
+          .expect(200)
+          .expect({
+            version: firmware,
+            url: fileUrl,
+          });
+      });
+      return Promise.all(promises);
+    });
+  });
+});
