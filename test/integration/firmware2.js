@@ -32,9 +32,6 @@ describe('/firmware router', () => {
             url: fileUrl,
           });
       });
-      // Promise.all(promises).then(() => {
-      //   done();
-      // }).catch(reason => done(reason));
       return Promise.all(promises);
     });
   });
