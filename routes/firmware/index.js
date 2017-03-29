@@ -7,7 +7,7 @@ const router = Router();
 const avaiableVersions = () => {
   const fw = Object.keys(process.env)
                .filter(v => v.match(/BL_LATEST_FIRMWARE_VERSION_/))
-               .map(v => `/v${v.match(/\d+/)[0]}$`)
+               .map(v => `/v${v.match(/\d+/)[0]}$`) // regex: /v1$|v2$|v12$...
                .join('|');
   return new RegExp(fw);
 };

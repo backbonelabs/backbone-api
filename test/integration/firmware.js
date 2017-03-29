@@ -48,4 +48,12 @@ describe('/firmware router', () => {
       return Promise.all(promises);
     });
   });
+  describe('GET /vY', () => {
+    it('should return 404 not found for unknown firmware versions', (done) => {
+      request(app)
+        .get('/firmware/v1234')
+        .send({})
+        .expect(404, done);
+    });
+  });
 });
