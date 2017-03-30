@@ -19,7 +19,7 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
   .then(() => (
     dbManager.getDb()
     .collection('users')
-    .find({ email: req.body.email })
+    .find({ email: new RegExp(req.body.email, 'i') })
     .limit(1)
     .next()
   ))
@@ -32,7 +32,7 @@ export default req => validate(req.body, schemas.user, ['email'], ['_id'])
         .then(([passwordResetToken, passwordResetTokenExpiry]) => (
           dbManager.getDb()
             .collection('users')
-            .findOneAndUpdate({ email: req.body.email }, {
+            .findOneAndUpdate({ email: new RegExp(req.body.email, 'i') }, {
               $set: {
                 passwordResetToken,
                 passwordResetTokenExpiry,

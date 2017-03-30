@@ -85,7 +85,7 @@ export default req => validate(req.body, Object.assign({}, schemas.user, {
     if (email) {
       return dbManager.getDb()
       .collection('users')
-      .find({ email })
+      .find({ email: new RegExp(email, 'i') })
       .limit(1)
       .next()
       .then((user) => {
