@@ -35,7 +35,7 @@ before(() => (
       db.collection('users')
       .insertMany([
         mergeWithDefaultData({
-          email: testEmail1.toLowerCase(),
+          email: testEmail1,
           password: testPasswordHash,
         }),
       ])

@@ -30,7 +30,7 @@ export default req => validate(req.body, {
     // Check if there is already a user with this email
     dbManager.getDb()
       .collection('users')
-      .find({ email: req.body.email.toLowerCase() })
+      .find({ email: new RegExp(req.body.email, 'i') })
       .limit(1)
       .next()
       .then((user) => {
@@ -50,7 +50,7 @@ export default req => validate(req.body, {
         dbManager.getDb()
           .collection('users')
           .insertOne(userDefaults.mergeWithDefaultData({
-            email: req.body.email.toLowerCase(),
+            email: req.body.email,
             password: hash,
             createdAt: new Date(),
             confirmationToken,
