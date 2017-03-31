@@ -1,5 +1,6 @@
 import Debug from 'debug';
 import express from 'express';
+import bugsnag from 'bugsnag';
 import bodyParser from 'body-parser';
 import dbManager from './lib/dbManager';
 import authRouter from './routes/auth';
@@ -9,6 +10,14 @@ import usersRouter from './routes/users';
 
 const debug = Debug('api');
 const app = express();
+
+// Register bugsnag api key
+bugsnag.register(process.env.BL_BUGSNAG_API_KEY);
+
+// Report uncaughtException error
+process.on('uncaughtException', (err) => {
+  bugsnag.notify(err);
+});
 
 // Disable the "X-Powered-By: Express" HTTP header
 app.disable('x-powered-by');
