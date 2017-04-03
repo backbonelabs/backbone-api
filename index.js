@@ -19,6 +19,15 @@ process.on('uncaughtException', (err) => {
   bugsnag.notify(err);
 });
 
+// Report unhandledRejection error
+process.on('unhandledRejection', (err, promise) => {
+  debug('Possibly Unhandled Rejection at: Promise ', promise, ' reason: ', err);
+  bugsnag.notify(err);
+});
+
+// Bugsnag middleware
+app.use(bugsnag.requestHandler);
+
 // Disable the "X-Powered-By: Express" HTTP header
 app.disable('x-powered-by');
 
@@ -45,6 +54,7 @@ export default dbManager.init({
     app.use('/firmware', firmwareRouter);
     app.use('/support', supportRouter);
     app.use('/users', usersRouter);
+    app.use(bugsnag.errorHandler);
 
     const port = process.env.PORT;
     app.listen(port, () => {
