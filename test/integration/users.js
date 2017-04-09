@@ -181,6 +181,7 @@ describe('/users router', () => {
             'vibrationStrength',
             'vibrationPattern',
             'slouchTimeThreshold',
+            'slouchNotification',
           );
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
