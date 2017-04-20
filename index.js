@@ -3,6 +3,7 @@ import express from 'express';
 import bugsnag from 'bugsnag';
 import bodyParser from 'body-parser';
 import dbManager from './lib/dbManager';
+import adminRouter from './routes/admin';
 import authRouter from './routes/auth';
 import firmwareRouter from './routes/firmware';
 import supportRouter from './routes/support';
@@ -50,6 +51,7 @@ export default dbManager.init({
 })
   .then(() => {
     // Register route handlers
+    app.use('/admin', adminRouter);
     app.use('/auth', authRouter);
     app.use('/firmware', firmwareRouter);
     app.use('/support', supportRouter);
