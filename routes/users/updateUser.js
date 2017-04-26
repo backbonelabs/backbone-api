@@ -1,4 +1,5 @@
 import Debug from 'debug';
+import { cloneDeep } from 'lodash';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -16,111 +17,125 @@ const debug = Debug('routes:users:updateUsers');
  * @param  {Object} req.body      Key-value pairs of user attributes to update
  * @return {Promise} Resolves with the user object containing the updated attributes, sans password
  */
-export default req => validate(req.body, Object.assign({}, schemas.user, {
-  currentPassword: schemas.password,
-  password: schemas.password,
-  verifyPassword: schemas.password,
-}), [], ['_id'])
-  .then(() => {
-    const {
-      password: pw,
-      verifyPassword,
-      currentPassword,
-      ...body
-    } = req.body;
+export default (req) => {
+  let reqBody = cloneDeep(req.body);
 
-    // Ensure birthdate gets saved as ISODate by making it a JS Date object
-    if (body.birthdate) {
-      body.birthdate = new Date(body.birthdate);
+  // If the session time sent from the user's phone is ahead of the servers's time then
+  // set the last session time to the current server's time so it won't fail validation.
+  if (reqBody.lastSession) {
+    const sessionUnixTime = Date.parse(reqBody.lastSession);
+    const systemUnixTime = Date.now();
+    if (sessionUnixTime > systemUnixTime) {
+      reqBody = Object.assign({}, reqBody, { lastSession: new Date(systemUnixTime) });
     }
+  }
 
-    // Ensure lastSession gets saved as ISODate by making it a JS Date object
-    if (body.lastSession) {
-      body.lastSession = new Date(body.lastSession);
-    }
+  return validate(reqBody, Object.assign({}, schemas.user, {
+    currentPassword: schemas.password,
+    password: schemas.password,
+    verifyPassword: schemas.password,
+  }), [], ['_id'])
+    .then(() => {
+      const {
+        password: pw,
+        verifyPassword,
+        currentPassword,
+        ...body
+      } = req.body;
 
-    if (pw || verifyPassword) {
-      // Make sure password and verifyPassword are the same
-      if (pw !== verifyPassword) {
-        throw new Error('Passwords must match');
+      // Ensure birthdate gets saved as ISODate by making it a JS Date object
+      if (body.birthdate) {
+        body.birthdate = new Date(body.birthdate);
       }
-      return dbManager.getDb()
+
+      // Ensure lastSession gets saved as ISODate by making it a JS Date object
+      if (body.lastSession) {
+        body.lastSession = new Date(body.lastSession);
+      }
+
+      if (pw || verifyPassword) {
+        // Make sure password and verifyPassword are the same
+        if (pw !== verifyPassword) {
+          throw new Error('Passwords must match');
+        }
+        return dbManager.getDb()
+          .collection('users')
+          .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
+          .limit(1)
+          .next()
+          .then((user) => {
+            if (user) {
+              debug('Found user by id', req.params.id);
+              return user;
+            }
+            debug('Did not find user by id', req.params.id);
+            throw new Error('Invalid user id');
+          })
+        .then(user => (
+          // Verify password matches
+          password.verify(currentPassword, user.password)
+        ))
+        .then((isPasswordMatch) => {
+          // If password doesn't match
+          if (!isPasswordMatch) {
+            debug('Invalid password');
+            throw new Error('Current password is incorrect');
+          }
+          // Hash password
+          return password.hash(pw)
+            .then((hash) => {
+              body.password = hash;
+              return body;
+            });
+        });
+      }
+
+      return body;
+    })
+    .then((body) => {
+      const { email } = body;
+
+      // Check if email is already taken
+      if (email) {
+        return dbManager.getDb()
         .collection('users')
-        .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
+        .find({ email: new RegExp(email, 'i') })
         .limit(1)
         .next()
         .then((user) => {
           if (user) {
-            debug('Found user by id', req.params.id);
-            return user;
+            throw new Error('Email already taken');
           }
-          debug('Did not find user by id', req.params.id);
-          throw new Error('Invalid user id');
-        })
-      .then(user => (
-        // Verify password matches
-        password.verify(currentPassword, user.password)
-      ))
-      .then((isPasswordMatch) => {
-        // If password doesn't match
-        if (!isPasswordMatch) {
-          debug('Invalid password');
-          throw new Error('Current password is incorrect');
-        }
-        // Hash password
-        return password.hash(pw)
-          .then((hash) => {
-            body.password = hash;
-            return body;
-          });
-      });
-    }
+          return tokenFactory.generateToken()
+            .then(([confirmationToken, confirmationTokenExpiry]) =>
+              Object.assign(body, { confirmationToken, confirmationTokenExpiry })
+            )
+            .then(() => {
+              const emailUtility = EmailUtility.getMailer();
+              return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
+            })
+            .then(() => Object.assign(body, { isConfirmed: false }));
+        });
+      }
+      return body;
+    })
+    .then(updateFields => (
+      // Attempt to update the user
+      dbManager.getDb()
+        .collection('users')
+        .findOneAndUpdate(
+          { _id: dbManager.mongodb.ObjectID(req.params.id) },
+          { $set: updateFields },
+          { returnOriginal: false },
+        )
+    ))
+    .then((user) => {
+      if (!user.value) {
+        // User ID doesn't exist
+        throw new Error('Invalid user');
+      }
 
-    return body;
-  })
-  .then((body) => {
-    const { email } = body;
-
-    // Check if email is already taken
-    if (email) {
-      return dbManager.getDb()
-      .collection('users')
-      .find({ email: new RegExp(email, 'i') })
-      .limit(1)
-      .next()
-      .then((user) => {
-        if (user) {
-          throw new Error('Email already taken');
-        }
-        return tokenFactory.generateToken()
-          .then(([confirmationToken, confirmationTokenExpiry]) =>
-            Object.assign(body, { confirmationToken, confirmationTokenExpiry })
-          )
-          .then(() => {
-            const emailUtility = EmailUtility.getMailer();
-            return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
-          })
-          .then(() => Object.assign(body, { isConfirmed: false }));
-      });
-    }
-    return body;
-  })
-  .then(updateFields => (
-    // Attempt to update the user
-    dbManager.getDb()
-      .collection('users')
-      .findOneAndUpdate(
-        { _id: dbManager.mongodb.ObjectID(req.params.id) },
-        { $set: updateFields },
-        { returnOriginal: false },
-      )
-  ))
-  .then((user) => {
-    if (!user.value) {
-      // User ID doesn't exist
-      throw new Error('Invalid user');
-    }
-
-    // Return updated user
-    return sanitizeUser(user.value);
-  });
+      // Return updated user
+      return sanitizeUser(user.value);
+    });
+};
