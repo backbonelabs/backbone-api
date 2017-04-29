@@ -1,5 +1,4 @@
 import Debug from 'debug';
-import { cloneDeep } from 'lodash';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -18,7 +17,7 @@ const debug = Debug('routes:users:updateUsers');
  * @return {Promise} Resolves with the user object containing the updated attributes, sans password
  */
 export default (req) => {
-  let reqBody = cloneDeep(req.body);
+  const reqBody = Object.assign({}, req.body);
 
   // If the session time sent from the user's phone is ahead of the servers's time then
   // set the last session time to the current server's time so it won't fail validation.
@@ -26,7 +25,7 @@ export default (req) => {
     const sessionUnixTime = Date.parse(reqBody.lastSession);
     const systemUnixTime = Date.now();
     if (sessionUnixTime > systemUnixTime) {
-      reqBody = Object.assign({}, reqBody, { lastSession: new Date(systemUnixTime) });
+      reqBody.lastSession = new Date(systemUnixTime);
     }
   }
 
@@ -41,7 +40,7 @@ export default (req) => {
         verifyPassword,
         currentPassword,
         ...body
-      } = req.body;
+      } = reqBody;
 
       // Ensure birthdate gets saved as ISODate by making it a JS Date object
       if (body.birthdate) {
