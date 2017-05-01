@@ -25,7 +25,7 @@ export default (req) => {
     const sessionUnixTime = Date.parse(reqBody.lastSession);
     const systemUnixTime = Date.now();
     if (sessionUnixTime > systemUnixTime) {
-      reqBody.lastSession = new Date(systemUnixTime);
+      reqBody.lastSession = (new Date(systemUnixTime)).toISOString();
     }
   }
 
