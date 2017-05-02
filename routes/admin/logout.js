@@ -21,9 +21,13 @@ export default req => new Promise((resolve, reject) => {
       { $unset: { accessToken: true } },
       { returnOriginal: false },
     )
-    .then(() => {
-      debug('Logout successful');
-      // Nothing needs to be returned
+    .then((result) => {
+      if (result.value) {
+        debug('Removed access token', result.value);
+      } else {
+        debug('Access token not found, no-op');
+      }
+      // Resolve regardless if the access token was valid or not
       resolve();
     })
     .catch((err) => {
