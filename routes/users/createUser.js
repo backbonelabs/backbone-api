@@ -30,7 +30,7 @@ export default req => validate(req.body, {
     // Check if there is already a user with this email
     dbManager.getDb()
       .collection('users')
-      .find({ email: new RegExp(req.body.email, 'i') })
+      .find({ email: new RegExp(`^${req.body.email}$`, 'i') })
       .limit(1)
       .next()
       .then((user) => {
