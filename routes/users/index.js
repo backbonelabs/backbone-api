@@ -6,10 +6,12 @@ import createUser from './createUser';
 import updateUser from './updateUser';
 import updateUserSettings from './updateUserSettings';
 import getUserSessions from './getUserSessions';
+import facebookUser from './facebookUser';
 
 const router = Router();
 
 router.post('/', handleRoute(createUser));
+router.post('/fbLogin/', handleRoute(facebookUser));
 router.get('/:id', requireSelfAuth, handleRoute(getUser));
 router.get('/sessions/:id', requireSelfAuth, handleRoute(getUserSessions));
 router.post('/:id', requireSelfAuth, handleRoute(updateUser));
