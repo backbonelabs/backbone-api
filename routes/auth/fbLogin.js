@@ -44,12 +44,15 @@ export default (req, res) => validate(req.body, {
               birthdate: (new Date(birthdate)),
               password: null,
               isConfirmed: true,
+              authMethod: 'facebook',
               createdAt: new Date(),
             }))
             .then((newDoc) => {
               debug('newDoc:', newDoc.ops[0]);
               return newDoc.ops[0];
             });
+        } else if (user.authMethod === 'password') {
+          throw new Error('Please login using your email and password');
         }
         return user;
       });

@@ -38,6 +38,9 @@ export default (req, res) => validate(req.body, {
       .then((user) => {
         if (user) {
           debug('Found user by email', email);
+          if (user.authMethod === 'facebook') {
+            throw new Error('Please login using your Facebook account');
+          }
           return user;
         }
         debug('Did not find user by email', email);
