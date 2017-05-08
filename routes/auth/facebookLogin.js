@@ -31,11 +31,8 @@ export default (req, res) => validate(req.body, {
   accessToken: schemas.facebook.accessToken,
   applicationID: schemas.facebook.applicationID,
 }, ['email', 'accessToken', 'applicationID'], [], { allowUnknown: true })
-  .catch(() => {
-    throw new Error(errorMessage);
-  })
   .then(() => {
-    const envAppID = process.env.APP_ID;
+    const envAppID = process.env.FB_APP_ID;
     const {
       accessToken: reqAccessToken,
       applicationID: reqAppID,
@@ -45,7 +42,7 @@ export default (req, res) => validate(req.body, {
       uri: 'https://graph.facebook.com/debug_token',
       qs: {
         input_token: reqAccessToken,
-        access_token: `${envAppID}|${process.env.APP_SECRET}`,
+        access_token: `${envAppID}|${process.env.FB_APP_SECRET}`,
       },
       json: true,
     };
@@ -63,9 +60,6 @@ export default (req, res) => validate(req.body, {
         if (debugTokenAppID !== envAppID || !isValid) {
           throw new Error(errorMessage);
         }
-      })
-      .catch(() => {
-        throw new Error('Unable to verify identity.  Try again later.');
       });
   })
   .then(() => {
@@ -102,7 +96,7 @@ export default (req, res) => validate(req.body, {
             }))
             .then(newDoc => newDoc.ops[0]);
         } else if (user.authMethod === 'password') {
-          // Throws error because user already resgistered with email and password
+          // Throws error because user already registered with email and password
           throw new Error('Please login using your email and password');
         }
         return user;

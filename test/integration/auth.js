@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import requestPromise from 'request-promise';
 import request from 'supertest';
 import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
@@ -16,6 +17,7 @@ let confirmedUserFixture;
 let validTokenUserFixture;
 let invalidTokenUserFixture;
 let accessTokenFixture;
+let validFBAccessToken;
 
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
@@ -24,6 +26,7 @@ const testEmail4 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const accessTokensToDelete = [];
+const validFBAppID = process.env.FB_APP_ID;
 
 before(() => Promise.resolve(server)
   .then((expressApp) => {
@@ -90,6 +93,23 @@ before(() => Promise.resolve(server)
     accessTokenFixture = results.ops[0];
     accessTokenFixture.userId = accessTokenFixture.userId.toHexString();
     accessTokensToDelete.push(accessTokenFixture.accessToken);
+  })
+  .then(() => {
+    // get a valid Facebook access token from a test user
+    const options = {
+      method: 'GET',
+      uri: `https://graph.facebook.com/${validFBAppID}/accounts/test-users/`,
+      qs: {
+        fields: 'access_token',
+        access_token: `${validFBAppID}|${process.env.FB_APP_SECRET}`,
+      },
+      json: true,
+    };
+
+    return requestPromise(options);
+  })
+  .then((body) => {
+    validFBAccessToken = body.data[0].access_token;
   }),
 );
 
@@ -164,6 +184,106 @@ describe('/auth router', () => {
         .send({
           email: confirmedUserFixture.email,
           password: testPassword,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.contain.all.keys(['_id', 'email', 'accessToken']);
+          expect(res.body).to.not.contain.all.keys(['password']);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
+        .end((err, res) => {
+          if (!err) {
+            accessTokensToDelete.push(res.body.accessToken);
+          }
+          done(err, res);
+        });
+    });
+  });
+
+  describe('POST /facebookLogin', () => {
+    const url = '/auth/facebookLogin';
+    const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
+      request(app)
+        .post(url)
+        .send(body)
+        .expect(statusCode)
+        .end((err, res) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(res);
+          }
+        });
+    });
+
+    // Email checks
+    it('should reject when email is not in request body', () => assertRequestStatusCode(400, {
+      applicationID: validFBAppID,
+      accessToken: validFBAccessToken,
+    }));
+
+    it('should reject invalid email formats', () => {
+      const restOfbody = {
+        accessToken: validFBAccessToken,
+        applicationID: validFBAppID,
+      };
+      const simpleWord = 'email';
+      const noAtSymbol = 'bb.com';
+      const noLocal = '@b.com';
+      const noDomain = 'b@';
+
+      return Promise.all([
+        assertRequestStatusCode(400, Object.assign({ email: simpleWord }, restOfbody)),
+        assertRequestStatusCode(400, Object.assign({ email: noAtSymbol }, restOfbody)),
+        assertRequestStatusCode(400, Object.assign({ email: noLocal }, restOfbody)),
+        assertRequestStatusCode(400, Object.assign({ email: noDomain }, restOfbody)),
+      ]);
+    });
+
+    // access token checks
+    it('should reject when accessToken is not in request body', () => assertRequestStatusCode(400, {
+      email: testEmail1,
+      applicationID: validFBAppID,
+    }));
+
+    it('should reject when accessToken is not a token', () => assertRequestStatusCode(400, {
+      email: testEmail1,
+      accessToken: '@123a1aaf',
+      applicationID: validFBAppID,
+    }));
+
+    it('should reject an invalid accessToken', () => assertRequestStatusCode(401, {
+      email: testEmail1,
+      applicationID: validFBAppID,
+      accessToken: '1badAccessToken',
+    }));
+
+    // application ID checks
+    it('should reject when applicationID is not in request body', () => assertRequestStatusCode(400, {
+      email: testEmail1,
+      accessToken: validFBAccessToken,
+    }));
+
+    it('should reject an applicationID that contains letters', () => assertRequestStatusCode(400, {
+      email: testEmail1,
+      accessToken: validFBAccessToken,
+      applicationID: '1a2b345678',
+    }));
+
+    it('should reject an invalid applicationID', () => assertRequestStatusCode(401, {
+      email: testEmail1,
+      accessToken: validFBAccessToken,
+      applicationID: '12345678',
+    }));
+
+    it('should return user profile and access token on valid' +
+       'email/accessToken/applicationID combination', (done) => {
+      request(app)
+        .post(url)
+        .send({
+          email: confirmedUserFixture.email,
+          accessToken: validFBAccessToken,
+          applicationID: validFBAppID,
         })
         .expect(200)
         .expect((res) => {
