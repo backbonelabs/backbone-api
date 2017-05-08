@@ -98,7 +98,7 @@ export default (req) => {
       if (email) {
         return dbManager.getDb()
         .collection('users')
-        .find({ email: new RegExp(email, 'i') })
+        .find({ email: new RegExp(`^${email}$`, 'i') })
         .limit(1)
         .next()
         .then((user) => {
