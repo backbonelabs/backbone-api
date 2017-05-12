@@ -7,13 +7,13 @@ import passwordReset from './passwordReset';
 import passwordResetToken from './passwordResetToken';
 import confirmEmail from './confirmEmail';
 import confirmPassword from './confirmPassword';
-import facebookLogin from './facebookLogin';
+import facebook from './facebook';
 
 const router = Router();
 
 router.post('/login', handleRoute(login));
 router.post('/logout', requireAuth, handleRoute(logout));
-router.post('/facebookLogin', handleRoute(facebookLogin));
+router.post('/facebook', handleRoute(facebook));
 router.post('/password-reset-token', handleRoute(passwordResetToken));
 router.post('/password-reset', handleRoute(passwordReset));
 router.get('/confirm/email', handleRoute(confirmEmail));

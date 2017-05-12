@@ -5,6 +5,7 @@ import dbManager from '../../lib/dbManager';
 import passwordUtil from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
+import constants from '../../lib/constants';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid login credentials. Please try again.';
@@ -38,8 +39,9 @@ export default (req, res) => validate(req.body, {
       .then((user) => {
         if (user) {
           debug('Found user by email', email);
-          if (user.authMethod === 'facebook') {
-            throw new Error('Please login using your Facebook account');
+          if (user.authMethod === constants.authMethod.FACEBOOK &&
+              user.password === null) {
+            throw new Error('Please log in using your Facebook account');
           }
           return user;
         }
