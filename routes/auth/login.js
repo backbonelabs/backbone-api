@@ -39,9 +39,8 @@ export default (req, res) => validate(req.body, {
       .then((user) => {
         if (user) {
           debug('Found user by email', email);
-          if (user.authMethod === constants.authMethod.FACEBOOK &&
-              user.password === null) {
-            throw new Error('Please log in using your Facebook account');
+          if (user.authMethods !== constants.authMethods.EMAIL) {
+            throw new Error(errorMessage);
           }
           return user;
         }

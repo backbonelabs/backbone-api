@@ -6,6 +6,7 @@ import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
+import constants from '../../lib/constants';
 
 const debug = Debug('routes:users:updateUsers');
 
@@ -65,6 +66,9 @@ export default (req) => {
           .then((user) => {
             if (user) {
               debug('Found user by id', req.params.id);
+              if (user.authMethods !== constants.authMethods.EMAIL) {
+                throw new Error('Password change is not allowed');
+              }
               return user;
             }
             debug('Did not find user by id', req.params.id);

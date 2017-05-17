@@ -13,12 +13,15 @@ let emailUtility;
 let app;
 let db;
 let userFixture = {};
+let fbUserFixture;
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
+const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken = randomString({ length: 64 });
+const fbTestAccessToken = randomString({ length: 64 });
 const userIdsToDelete = [];
 const accessTokensToDelete = [testAccessToken];
 
@@ -38,20 +41,32 @@ before(() => (
           email: testEmail1,
           password: testPasswordHash,
         }),
+        mergeWithDefaultData({
+          email: testEmail2,
+          authMethods: constants.authMethods.FACEBOOK,
+        }),
       ])
     ))
     .then((results) => {
       const { ops } = results;
       userFixture = ops[0];
       userFixture._id = userFixture._id.toHexString();
+
+      fbUserFixture = ops[1];
+      fbUserFixture._id = fbUserFixture._id.toHexString();
+
       userIdsToDelete.push(userFixture._id);
+      userIdsToDelete.push(fbUserFixture._id);
     })
     .then(() => (
       db.collection('accessTokens')
-        .insertOne({
+        .insertMany([{
           userId: mongodb.ObjectID(userFixture._id),
           accessToken: testAccessToken,
-        })
+        }, {
+          userId: mongodb.ObjectID(fbUserFixture._id),
+          accessToken: fbTestAccessToken,
+        }])
     ))
 ));
 
@@ -171,7 +186,7 @@ describe('/users router', () => {
             'confirmationTokenExpiry',
             'dailyStreak',
             'lastSession',
-            'authMethod',
+            'authMethods',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -333,6 +348,20 @@ describe('/users router', () => {
         .then((isPasswordMatches) => {
           expect(isPasswordMatches).to.be.true;
         });
+    });
+
+    it('should not update password on non email/password accounts', (done) => {
+      const newPassword = 'abcd1234';
+      request(app)
+        .post(`/users/${fbUserFixture._id}`)
+        .set('Authorization', `Bearer ${fbTestAccessToken}`)
+        .send({
+          currentPassword: testPassword,
+          password: newPassword,
+          verifyPassword: newPassword,
+        })
+        .expect(400)
+        .end(done);
     });
   });
 

@@ -1,6 +1,7 @@
 import Debug from 'debug';
 import request from 'request-promise';
 import userDefaults from '../../lib/userDefaults';
+import EmailUtility from '../../lib/EmailUtility';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -9,7 +10,13 @@ import tokenFactory from '../../lib/tokenFactory';
 import constants from '../../lib/constants';
 
 const debug = Debug('routes:auth:facebook');
-const errorMessage = 'Invalid credentials. Please try again.';
+let isNew = false;
+const errorMessages = {
+  invalidCredentials: 'Invalid credentials. Please try again.',
+  unverifiedFacebook: 'A verified Facebook account is required to register.',
+  unconfirmedEmail: 'An account has already been registered but not confirmed \n' +
+                  'with this email.  Please confirm your email before proceeding.',
+};
 
 /**
  * Verifies a user account by checking validity of user's Facebook access token
@@ -29,11 +36,9 @@ const errorMessage = 'Invalid credentials. Please try again.';
  * @return {Promise} Resolves with a user object that has an accessToken property
  */
 export default (req, res) => validate(req.body, {
+  ...schemas.facebook,
   email: schemas.user.email,
-  accessToken: schemas.facebook.accessToken,
-  applicationID: schemas.facebook.applicationID,
-  id: schemas.facebook.id,
-}, ['email', 'accessToken', 'applicationID', 'id'], [], { allowUnknown: true })
+}, ['email', 'accessToken', 'applicationID', 'id', 'verified'], [], { allowUnknown: true })
   .then(() => {
     const envAppID = process.env.FB_APP_ID;
     const envFBAppSecret = process.env.FB_APP_SECRET;
@@ -41,6 +46,7 @@ export default (req, res) => validate(req.body, {
       accessToken: reqAccessToken,
       applicationID: reqAppID,
       id: reqUserID,
+      verified: reqVerified,
     } = req.body;
     const options = {
       method: 'GET',
@@ -52,9 +58,13 @@ export default (req, res) => validate(req.body, {
       json: true,
     };
 
+    // Check if the Facebook account is verified.
+    if (!reqVerified) {
+      throw new Error(errorMessages.unverifiedFacebook);
+    }
     // Check if the requested app ID is valid against our own env app ID.
     if (reqAppID !== envAppID) {
-      throw new Error(errorMessage);
+      throw new Error(errorMessages.invalidCredentials);
     }
 
     // Checks if the requested access token is valid by verify the application ID,
@@ -69,7 +79,7 @@ export default (req, res) => validate(req.body, {
         if (debugTokenAppID !== reqAppID ||
             debugTokenUserID !== reqUserID ||
             !debugTokenIsValid) {
-          throw new Error(errorMessage);
+          throw new Error(errorMessages.invalidCredentials);
         }
       });
   })
@@ -79,45 +89,63 @@ export default (req, res) => validate(req.body, {
       gender,
       first_name: firstName,
       last_name: lastName,
-      id: facebookUserID,
+      id: facebookID,
     } = req.body;
 
     // Check if there is already a user with existing email or facebookUserID
     return dbManager.getDb()
       .collection('users')
       .findOne({ $or: [
-        { email: new RegExp(email, 'i') },
-        { facebookUserID },
+        { email: new RegExp(`^${email}$`, 'i') },
+        { facebookID },
       ] })
       .then((user) => {
         if (!user) {
           // Create new local user for facebook user
+          isNew = true;
           return dbManager.getDb()
             .collection('users')
             .insertOne(userDefaults.mergeWithDefaultData({
               email,
               firstName,
               lastName,
-              facebookUserID,
-              nickName: firstName,
+              facebookID,
+              nickname: firstName,
               gender: (gender === 'male' ? 1 : 2),
-              password: null,
               isConfirmed: true,
-              authMethod: constants.authMethod.FACEBOOK,
+              authMethods: constants.authMethods.FACEBOOK,
               createdAt: new Date(),
             }))
             .then(newDoc => newDoc.ops[0]);
-        } else if (user.authMethod === constants.authMethod.EMAIL) {
+        } else if (user.authMethods === constants.authMethods.EMAIL) {
           // User exist but signed up with email/password so we add their facebook
-          // user ID to document
-          if (!user.facebookUserID) {
+          // user ID to document only if their email is confirmed
+          if (!user.facebookID && user.isConfirmed) {
             return dbManager.getDb()
             .collection('users')
             .findOneAndUpdate(
-              { email: new RegExp(email, 'i') },
-              { $set: { facebookUserID } },
+              { email: new RegExp(`^${req.body.email}$`, 'i') },
+              { $set: { facebookID } },
               { returnOriginal: false })
             .then(updatedDoc => updatedDoc.value);
+          } else if (!user.isConfirmed) {
+            // User is not confirmed so we automatically resend the confirmation
+            // email and throw an error back to the app.
+            tokenFactory.generateToken()
+              .then(([confirmationToken, confirmationTokenExpiry]) => (
+                dbManager.getDb()
+                  .collection('users')
+                  .findOneAndUpdate(
+                    { email: new RegExp(`^${req.body.email}$`, 'i') },
+                    { $set: { confirmationToken, confirmationTokenExpiry } }
+                  )
+                  .then(() => {
+                    // Initiate sending of user confirmation email
+                    const emailUtility = EmailUtility.getMailer();
+                    emailUtility.sendConfirmationEmail(email, confirmationToken);
+                  })
+              ));
+            throw new Error(errorMessages.unconfirmedEmail);
           }
         }
         return user;
@@ -141,12 +169,16 @@ export default (req, res) => validate(req.body, {
     // Return sanitized user object with access token
     const userResult = sanitizeUser(user);
     userResult.accessToken = accessToken;
+    if (isNew) {
+      userResult.isNew = true;
+    }
     return userResult;
   })
   .catch((err) => {
-    if (err.message === errorMessage) {
-      // Use 401 status code for invalid auth errors
-      res.status(401);
-    }
+    Object.keys(errorMessages).forEach((key) => {
+      if (errorMessages[key] === err.message) {
+        res.status(401);
+      }
+    });
     throw err;
   });
