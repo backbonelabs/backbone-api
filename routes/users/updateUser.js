@@ -66,7 +66,7 @@ export default (req) => {
           .then((user) => {
             if (user) {
               debug('Found user by id', req.params.id);
-              if (user.authMethods !== constants.authMethods.EMAIL) {
+              if (user.authMethod !== constants.authMethods.EMAIL) {
                 throw new Error('Password change is not allowed');
               }
               return user;

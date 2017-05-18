@@ -22,7 +22,7 @@ let fbExistingUserFixture;
 let fbUnconfirmedEmailFixture;
 let fbConfirmedEmailFixture;
 let validFBAccessToken;
-let validFBUserID;
+let validFBUserId;
 
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
@@ -35,7 +35,8 @@ const testEmail8 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const accessTokensToDelete = [];
-const validFBAppID = process.env.FB_APP_ID;
+const validFBAppId = process.env.FB_APP_ID;
+const fbNoEmailFixture = {};
 
 before(() => Promise.resolve(server)
   .then((expressApp) => {
@@ -56,16 +57,16 @@ before(() => Promise.resolve(server)
           .insertMany([{
             email: testEmail1,
             password: testPasswordHash,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
           }, {
             email: testEmail2,
             password: testPasswordHash,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
             isConfirmed: true,
           }, {
             email: testEmail3,
             password: testPasswordHash,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
             isConfirmed: false,
             passwordResetToken: token,
             passwordResetTokenExpiry: tokenExpiry,
@@ -74,7 +75,7 @@ before(() => Promise.resolve(server)
           }, {
             email: testEmail4,
             password: testPasswordHash,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
             isConfirmed: false,
             passwordResetToken: expiredToken,
             passwordResetTokenExpiry: expiredTokenExpiry,
@@ -83,14 +84,14 @@ before(() => Promise.resolve(server)
           }, {
             email: testEmail5,
             isConfirmed: false,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
           }, {
             email: testEmail6,
             isConfirmed: true,
-            authMethods: constants.authMethods.EMAIL,
+            authMethod: constants.authMethods.EMAIL,
           }, {
             email: testEmail7,
-            authMethods: constants.authMethods.FACEBOOK,
+            authMethod: constants.authMethods.FACEBOOK,
           }]);
       })
   ))
@@ -124,10 +125,10 @@ before(() => Promise.resolve(server)
     // gets a valid Facebook access token from a test user
     const options = {
       method: 'GET',
-      uri: `https://graph.facebook.com/${validFBAppID}/accounts/test-users/`,
+      uri: `https://graph.facebook.com/${validFBAppId}/accounts/test-users/`,
       qs: {
         fields: 'access_token',
-        access_token: `${validFBAppID}|${process.env.FB_APP_SECRET}`,
+        access_token: `${validFBAppId}|${process.env.FB_APP_SECRET}`,
       },
       json: true,
     };
@@ -137,13 +138,16 @@ before(() => Promise.resolve(server)
   .then((body) => {
     // testUser1 is for adding facebook to existing email/password accounts
     // testUser2 is for new accounts from facebook logins
-    validFBUserID = {
+    // testUser3 is for facebook accounts without an email address
+    validFBUserId = {
       testUser1: body.data[0].id,
       testUser2: body.data[1].id,
+      testUser3: body.data[2].id,
     };
     validFBAccessToken = {
       testUser1: body.data[0].access_token,
       testUser2: body.data[1].access_token,
+      testUser3: body.data[2].access_token,
     };
   }),
 );
@@ -161,6 +165,7 @@ after(() => db.collection('accessTokens')
           mongodb.ObjectID(fbConfirmedEmailFixture._id),
           mongodb.ObjectID(fbUnconfirmedEmailFixture._id),
           mongodb.ObjectID(fbExistingUserFixture._id),
+          mongodb.ObjectID(fbNoEmailFixture._id),
         ],
       },
     }),
@@ -258,40 +263,12 @@ describe('/auth router', () => {
         });
     });
 
-    // Email checks
-    it('should reject when email is not in request body', () => assertRequestStatusCode(400, {
-      applicationID: validFBAppID,
-      accessToken: validFBAccessToken.testUser1,
-      id: validFBUserID.testUser1,
-      verified: true,
-    }));
-
-    it('should reject invalid email formats', () => {
-      const restOfbody = {
-        accessToken: validFBAccessToken.testUser1,
-        applicationID: validFBAppID,
-        id: validFBUserID.testUser1,
-        verified: true,
-      };
-      const simpleWord = 'email';
-      const noAtSymbol = 'bb.com';
-      const noLocal = '@b.com';
-      const noDomain = 'b@';
-
-      return Promise.all([
-        assertRequestStatusCode(400, Object.assign({ email: simpleWord }, restOfbody)),
-        assertRequestStatusCode(400, Object.assign({ email: noAtSymbol }, restOfbody)),
-        assertRequestStatusCode(400, Object.assign({ email: noLocal }, restOfbody)),
-        assertRequestStatusCode(400, Object.assign({ email: noDomain }, restOfbody)),
-      ]);
-    });
-
     // Email confirmation checks for existing users with email and password
     it('should reject Facebook login when existing email is not confirmed', () => assertRequestStatusCode(401, {
       email: testEmail5,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
@@ -301,8 +278,8 @@ describe('/auth router', () => {
         .send({
           email: testEmail6,
           accessToken: validFBAccessToken.testUser1,
-          applicationID: validFBAppID,
-          id: validFBUserID.testUser1,
+          applicationID: validFBAppId,
+          id: validFBUserId.testUser1,
           verified: true,
         })
         .expect(200)
@@ -311,10 +288,10 @@ describe('/auth router', () => {
             '_id',
             'email',
             'accessToken',
-            'facebookID',
-            'authMethods']);
+            'facebookId',
+            'authMethod']);
           expect(res.body).to.not.contain.any.keys('password', 'isNew');
-          expect(res.body.authMethods).to.equal(1);
+          expect(res.body.authMethod).to.equal(1);
           expect(res.body.accessToken.length).to.equal(64);
         })
         .end((err, res) => {
@@ -328,24 +305,24 @@ describe('/auth router', () => {
     // Access token checks
     it('should reject when accessToken is not in request body', () => assertRequestStatusCode(400, {
       email: testEmail7,
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
     it('should reject when accessToken is not a token', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: '@123a1aaf',
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
     it('should reject an invalid accessToken', () => assertRequestStatusCode(401, {
       email: testEmail7,
       accessToken: '1badAccessToken',
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
@@ -353,7 +330,7 @@ describe('/auth router', () => {
     it('should reject when applicationID is not in request body', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      id: validFBUserID.testUser1,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
@@ -361,7 +338,7 @@ describe('/auth router', () => {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
       applicationID: '1a2b345678',
-      id: validFBUserID.testUser1,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
@@ -369,7 +346,7 @@ describe('/auth router', () => {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
       applicationID: '12345678',
-      id: validFBUserID.testUser1,
+      id: validFBUserId.testUser1,
       verified: true,
     }));
 
@@ -377,14 +354,14 @@ describe('/auth router', () => {
     it('should reject when id is not in request body', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
+      applicationID: validFBAppId,
       verified: true,
     }));
 
     it('should reject an id that contains letters', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
+      applicationID: validFBAppId,
       id: '1invalid',
       verified: true,
     }));
@@ -392,7 +369,7 @@ describe('/auth router', () => {
     it('should reject an invalid id', () => assertRequestStatusCode(401, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
+      applicationID: validFBAppId,
       id: '111111',
       verified: true,
     }));
@@ -401,27 +378,27 @@ describe('/auth router', () => {
     it('should reject when verified is not in request body', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
     }));
 
     it('should reject when verified is false', () => assertRequestStatusCode(401, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser1,
+      applicationID: validFBAppId,
+      id: validFBUserId.testUser1,
       verified: false,
     }));
 
     // Email/accessToken/applicationID/userID combination check
-    it('should create new user with Facebook login', (done) => {
+    it('should create new user when Facebook login has email', (done) => {
       request(app)
         .post(url)
         .send({
           email: testEmail8,
           accessToken: validFBAccessToken.testUser2,
-          applicationID: validFBAppID,
-          id: validFBUserID.testUser2,
+          applicationID: validFBAppId,
+          id: validFBUserId.testUser2,
           verified: true,
         })
         .expect(200)
@@ -430,12 +407,11 @@ describe('/auth router', () => {
             '_id',
             'email',
             'accessToken',
-            'authMethods',
-            'facebookID',
-            'authMethods',
+            'authMethod',
+            'facebookId',
             'isNew',
             'isConfirmed']);
-          expect(res.body.authMethods).to.equal(2);
+          expect(res.body.authMethod).to.equal(2);
           expect(res.body.isConfirmed).to.be.true;
           expect(res.body.isNew).to.be.true;
           expect(res.body).to.not.contain.all.keys(['password']);
@@ -449,13 +425,102 @@ describe('/auth router', () => {
         });
     });
 
-    it('should allow FB login to existing Facebook account', () => assertRequestStatusCode(200, {
-      email: testEmail8,
-      accessToken: validFBAccessToken.testUser2,
-      applicationID: validFBAppID,
-      id: validFBUserID.testUser2,
-      verified: true,
-    }));
+    it('should create new user when Facebook login has no email', (done) => {
+      request(app)
+        .post(url)
+        .send({
+          accessToken: validFBAccessToken.testUser3,
+          applicationID: validFBAppId,
+          id: validFBUserId.testUser3,
+          verified: true,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.contain.all.keys([
+            '_id',
+            'accessToken',
+            'authMethod',
+            'facebookId',
+            'isNew',
+            'isConfirmed']);
+          expect(res.body.authMethod).to.equal(2);
+          expect(res.body.isConfirmed).to.be.true;
+          expect(res.body.isNew).to.be.true;
+          expect(res.body).to.not.contain.all.keys(['password']);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
+        .end((err, res) => {
+          if (!err) {
+            fbNoEmailFixture._id = res.body._id;
+            accessTokensToDelete.push(res.body.accessToken);
+          }
+          done(err, res);
+        });
+    });
+
+    it('should allow FB login to existing Facebook users with email', (done) => {
+      request(app)
+        .post(url)
+        .send({
+          email: testEmail8,
+          accessToken: validFBAccessToken.testUser2,
+          applicationID: validFBAppId,
+          id: validFBUserId.testUser2,
+          verified: true,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.contain.all.keys([
+            '_id',
+            'email',
+            'accessToken',
+            'authMethod',
+            'facebookId',
+            'isConfirmed']);
+          expect(res.body.authMethod).to.equal(2);
+          expect(res.body.isConfirmed).to.be.true;
+          expect(res.body).to.not.contain.any.keys(['password', 'isNew']);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
+        .end((err, res) => {
+          if (!err) {
+            accessTokensToDelete.push(res.body.accessToken);
+          }
+          done(err, res);
+        });
+    });
+
+    it('should allow FB login to existing Facebook users without email', (done) => {
+      request(app)
+        .post(url)
+        .send({
+          accessToken: validFBAccessToken.testUser3,
+          applicationID: validFBAppId,
+          id: validFBUserId.testUser3,
+          verified: true,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.contain.all.keys([
+            '_id',
+            'email',
+            'accessToken',
+            'authMethod',
+            'facebookId',
+            'isConfirmed']);
+          expect(res.body.authMethod).to.equal(2);
+          expect(res.body.isConfirmed).to.be.true;
+          console.log('email:', res.body.email);
+          expect(res.body).to.not.contain.any.keys(['password', 'isNew', 'email']);
+          expect(res.body.accessToken.length).to.equal(64);
+        })
+        .end((err, res) => {
+          if (!err) {
+            accessTokensToDelete.push(res.body.accessToken);
+          }
+          done(err, res);
+        });
+    });
   });
 
   describe('POST /logout', () => {

@@ -10,7 +10,6 @@ import tokenFactory from '../../lib/tokenFactory';
 import constants from '../../lib/constants';
 
 const debug = Debug('routes:auth:facebook');
-let isNew = false;
 const errorMessages = {
   invalidCredentials: 'Invalid credentials. Please try again.',
   unverifiedFacebook: 'A verified Facebook account is required to register.',
@@ -37,15 +36,14 @@ const errorMessages = {
  */
 export default (req, res) => validate(req.body, {
   ...schemas.facebook,
-  email: schemas.user.email,
-}, ['email', 'accessToken', 'applicationID', 'id', 'verified'], [], { allowUnknown: true })
+}, ['accessToken', 'applicationID', 'id', 'verified'], [], { allowUnknown: true })
   .then(() => {
-    const envAppID = process.env.FB_APP_ID;
+    const envAppId = process.env.FB_APP_ID;
     const envFBAppSecret = process.env.FB_APP_SECRET;
     const {
       accessToken: reqAccessToken,
-      applicationID: reqAppID,
-      id: reqUserID,
+      applicationID: reqAppId,
+      id: reqUserId,
       verified: reqVerified,
     } = req.body;
     const options = {
@@ -53,7 +51,7 @@ export default (req, res) => validate(req.body, {
       uri: 'https://graph.facebook.com/debug_token',
       qs: {
         input_token: reqAccessToken,
-        access_token: `${envAppID}|${envFBAppSecret}`,
+        access_token: `${envAppId}|${envFBAppSecret}`,
       },
       json: true,
     };
@@ -63,7 +61,7 @@ export default (req, res) => validate(req.body, {
       throw new Error(errorMessages.unverifiedFacebook);
     }
     // Check if the requested app ID is valid against our own env app ID.
-    if (reqAppID !== envAppID) {
+    if (reqAppId !== envAppId) {
       throw new Error(errorMessages.invalidCredentials);
     }
 
@@ -72,12 +70,12 @@ export default (req, res) => validate(req.body, {
     return request(options)
       .then((result) => {
         const {
-          app_id: debugTokenAppID,
+          app_id: debugTokenAppId,
           is_valid: debugTokenIsValid,
-          user_id: debugTokenUserID,
+          user_id: debugTokenUserId,
         } = result.data;
-        if (debugTokenAppID !== reqAppID ||
-            debugTokenUserID !== reqUserID ||
+        if (debugTokenAppId !== reqAppId ||
+            debugTokenUserId !== reqUserId ||
             !debugTokenIsValid) {
           throw new Error(errorMessages.invalidCredentials);
         }
@@ -89,7 +87,7 @@ export default (req, res) => validate(req.body, {
       gender,
       first_name: firstName,
       last_name: lastName,
-      id: facebookID,
+      id: facebookId,
     } = req.body;
 
     // Check if there is already a user with existing email or facebookUserID
@@ -97,35 +95,34 @@ export default (req, res) => validate(req.body, {
       .collection('users')
       .findOne({ $or: [
         { email: new RegExp(`^${email}$`, 'i') },
-        { facebookID },
+        { facebookId },
       ] })
       .then((user) => {
         if (!user) {
           // Create new local user for facebook user
-          isNew = true;
           return dbManager.getDb()
             .collection('users')
             .insertOne(userDefaults.mergeWithDefaultData({
               email,
               firstName,
               lastName,
-              facebookID,
+              facebookId,
               nickname: firstName,
               gender: (gender === 'male' ? 1 : 2),
               isConfirmed: true,
-              authMethods: constants.authMethods.FACEBOOK,
+              authMethod: constants.authMethods.FACEBOOK,
               createdAt: new Date(),
             }))
-            .then(newDoc => newDoc.ops[0]);
-        } else if (user.authMethods === constants.authMethods.EMAIL) {
+            .then(newDoc => Object.assign({}, newDoc.ops[0], { isNew: true }));
+        } else if (user.authMethod === constants.authMethods.EMAIL) {
           // User exist but signed up with email/password so we add their facebook
           // user ID to document only if their email is confirmed
-          if (!user.facebookID && user.isConfirmed) {
+          if (!user.facebookId && user.isConfirmed) {
             return dbManager.getDb()
             .collection('users')
             .findOneAndUpdate(
-              { email: new RegExp(`^${req.body.email}$`, 'i') },
-              { $set: { facebookID } },
+              { email: new RegExp(`^${email}$`, 'i') },
+              { $set: { facebookId } },
               { returnOriginal: false })
             .then(updatedDoc => updatedDoc.value);
           } else if (!user.isConfirmed) {
@@ -136,7 +133,7 @@ export default (req, res) => validate(req.body, {
                 dbManager.getDb()
                   .collection('users')
                   .findOneAndUpdate(
-                    { email: new RegExp(`^${req.body.email}$`, 'i') },
+                    { email: new RegExp(`^${email}$`, 'i') },
                     { $set: { confirmationToken, confirmationTokenExpiry } }
                   )
                   .then(() => {
@@ -169,9 +166,6 @@ export default (req, res) => validate(req.body, {
     // Return sanitized user object with access token
     const userResult = sanitizeUser(user);
     userResult.accessToken = accessToken;
-    if (isNew) {
-      userResult.isNew = true;
-    }
     return userResult;
   })
   .catch((err) => {

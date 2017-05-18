@@ -43,7 +43,7 @@ before(() => (
         }),
         mergeWithDefaultData({
           email: testEmail2,
-          authMethods: constants.authMethods.FACEBOOK,
+          authMethod: constants.authMethods.FACEBOOK,
         }),
       ])
     ))
@@ -186,7 +186,7 @@ describe('/users router', () => {
             'confirmationTokenExpiry',
             'dailyStreak',
             'lastSession',
-            'authMethods',
+            'authMethod',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
