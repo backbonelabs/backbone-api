@@ -33,7 +33,7 @@ export default (req, res) => validate(req.body, {
     // Look up user by email
     return dbManager.getDb()
       .collection('users')
-      .find({ email: new RegExp(email, 'i') })
+      .find({ email: new RegExp(`^${req.body.email}$`, 'i') })
       .limit(1)
       .next()
       .then((user) => {
