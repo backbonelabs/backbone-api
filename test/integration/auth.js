@@ -510,8 +510,7 @@ describe('/auth router', () => {
             'isConfirmed']);
           expect(res.body.authMethod).to.equal(2);
           expect(res.body.isConfirmed).to.be.true;
-          console.log('email:', res.body.email);
-          expect(res.body).to.not.contain.any.keys(['password', 'isNew', 'email']);
+          expect(res.body).to.not.contain.any.keys(['password', 'isNew']);
           expect(res.body.accessToken.length).to.equal(64);
         })
         .end((err, res) => {
