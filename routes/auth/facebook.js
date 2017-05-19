@@ -13,8 +13,9 @@ const debug = Debug('routes:auth:facebook');
 const errorMessages = {
   invalidCredentials: 'Invalid credentials. Please try again.',
   unverifiedFacebook: 'A verified Facebook account is required to register.',
-  unconfirmedEmail: 'An account has already been registered but not confirmed \n' +
-                  'with this email.  Please confirm your email before proceeding.',
+  unconfirmedEmail: 'An account has already been registered with the same email ' +
+    'address as your Facebook account. Please check your email to confirm your ' +
+    'email address. If you have any questions, please contact support@gobackbone.com.',
 };
 
 /**
@@ -74,7 +75,7 @@ export default (req, res) => validate(req.body, {
           is_valid: debugTokenIsValid,
           user_id: debugTokenUserId,
         } = result.data;
-        if (debugTokenAppId !== reqAppId ||
+        if (debugTokenAppId !== envAppId ||
             debugTokenUserId !== reqUserId ||
             !debugTokenIsValid) {
           throw new Error(errorMessages.invalidCredentials);
@@ -133,13 +134,15 @@ export default (req, res) => validate(req.body, {
                 dbManager.getDb()
                   .collection('users')
                   .findOneAndUpdate(
-                    { email: new RegExp(`^${email}$`, 'i') },
+                    // We use the DB email for confirmation because the user may
+                    // have changed their email in the app so won't match their Facebook email.
+                    { email: new RegExp(`^${user.email}$`, 'i') },
                     { $set: { confirmationToken, confirmationTokenExpiry } }
                   )
                   .then(() => {
                     // Initiate sending of user confirmation email
                     const emailUtility = EmailUtility.getMailer();
-                    emailUtility.sendConfirmationEmail(email, confirmationToken);
+                    emailUtility.sendConfirmationEmail(user.email, confirmationToken);
                   })
               ));
             throw new Error(errorMessages.unconfirmedEmail);
