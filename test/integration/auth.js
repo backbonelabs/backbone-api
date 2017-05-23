@@ -302,15 +302,15 @@ describe('/auth router', () => {
         });
     });
 
-    // Access token checks
-    it('should reject when accessToken is not in request body', () => assertRequestStatusCode(400, {
+    // Facebook access token checks
+    it('should reject when FB accessToken is not in request body', () => assertRequestStatusCode(400, {
       email: testEmail7,
       applicationID: validFBAppId,
       id: validFBUserId.testUser1,
       verified: true,
     }));
 
-    it('should reject when accessToken is not a token', () => assertRequestStatusCode(400, {
+    it('should reject when FB accessToken is not a token', () => assertRequestStatusCode(400, {
       email: testEmail7,
       accessToken: '@123a1aaf',
       applicationID: validFBAppId,
@@ -318,7 +318,7 @@ describe('/auth router', () => {
       verified: true,
     }));
 
-    it('should reject an invalid accessToken', () => assertRequestStatusCode(401, {
+    it('should reject an invalid FB accessToken', () => assertRequestStatusCode(401, {
       email: testEmail7,
       accessToken: '1badAccessToken',
       applicationID: validFBAppId,

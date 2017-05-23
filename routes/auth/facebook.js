@@ -37,6 +37,7 @@ const errorMessages = {
  */
 export default (req, res) => validate(req.body, {
   ...schemas.facebook,
+  email: schemas.user.email,
 }, ['accessToken', 'applicationID', 'id', 'verified'], [], { allowUnknown: true })
   .then(() => {
     const envAppId = process.env.FB_APP_ID;

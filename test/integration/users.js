@@ -13,17 +13,24 @@ let emailUtility;
 let app;
 let db;
 let userFixture = {};
-let fbUserFixture;
+let fbUserFixture1 = {};
+let fbUserFixture2 = {};
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
+const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
-const testAccessToken = randomString({ length: 64 });
-const fbTestAccessToken = randomString({ length: 64 });
+const testAccessToken1 = randomString({ length: 64 });
+const testAccessToken2 = randomString({ length: 64 });
+const testAccessToken3 = randomString({ length: 64 });
 const userIdsToDelete = [];
-const accessTokensToDelete = [testAccessToken];
+const accessTokensToDelete = [
+  testAccessToken1,
+  testAccessToken2,
+  testAccessToken3,
+];
 
 before(() => (
   Promise.resolve(server)
@@ -45,6 +52,9 @@ before(() => (
           email: testEmail2,
           authMethod: constants.authMethods.FACEBOOK,
         }),
+        mergeWithDefaultData({
+          authMethod: constants.authMethods.FACEBOOK,
+        }),
       ])
     ))
     .then((results) => {
@@ -52,20 +62,27 @@ before(() => (
       userFixture = ops[0];
       userFixture._id = userFixture._id.toHexString();
 
-      fbUserFixture = ops[1];
-      fbUserFixture._id = fbUserFixture._id.toHexString();
+      fbUserFixture1 = ops[1];
+      fbUserFixture1._id = fbUserFixture1._id.toHexString();
+
+      fbUserFixture2 = ops[2];
+      fbUserFixture2._id = fbUserFixture2._id.toHexString();
 
       userIdsToDelete.push(userFixture._id);
-      userIdsToDelete.push(fbUserFixture._id);
+      userIdsToDelete.push(fbUserFixture1._id);
+      userIdsToDelete.push(fbUserFixture2._id);
     })
     .then(() => (
       db.collection('accessTokens')
         .insertMany([{
           userId: mongodb.ObjectID(userFixture._id),
-          accessToken: testAccessToken,
+          accessToken: testAccessToken1,
         }, {
-          userId: mongodb.ObjectID(fbUserFixture._id),
-          accessToken: fbTestAccessToken,
+          userId: mongodb.ObjectID(fbUserFixture1._id),
+          accessToken: testAccessToken2,
+        }, {
+          userId: mongodb.ObjectID(fbUserFixture2._id),
+          accessToken: testAccessToken3,
         }])
     ))
 ));
@@ -234,7 +251,7 @@ describe('/users router', () => {
     it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(401)
         .expect({ error: 'Invalid credentials' })
         .end(done);
@@ -243,7 +260,7 @@ describe('/users router', () => {
     it('should return a user object without password data', (done) => {
       request(app)
         .get(`${url}/${userFixture._id}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).to.not.have.ownProperty('password');
@@ -257,7 +274,7 @@ describe('/users router', () => {
 
     const assertRequest = body => request(app)
       .post(url)
-      .set('Authorization', `Bearer ${testAccessToken}`)
+      .set('Authorization', `Bearer ${testAccessToken1}`)
       .send(body);
 
     before(() => {
@@ -298,7 +315,7 @@ describe('/users router', () => {
     it('should not update users if access token does not belong to the user id', (done) => {
       request(app)
         .post('/users/123456789012')
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .send({ email: 'new@email.com' })
         .expect(401)
         .expect({ error: 'Invalid credentials' })
@@ -353,14 +370,28 @@ describe('/users router', () => {
     it('should not update password on non email/password accounts', (done) => {
       const newPassword = 'abcd1234';
       request(app)
-        .post(`/users/${fbUserFixture._id}`)
-        .set('Authorization', `Bearer ${fbTestAccessToken}`)
+        .post(`/users/${fbUserFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken2}`)
         .send({
           currentPassword: testPassword,
           password: newPassword,
           verifyPassword: newPassword,
         })
         .expect(400)
+        .end(done);
+    });
+
+    it('should update email on Facebook account with no email', (done) => {
+      request(app)
+        .post(`/users/${fbUserFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken3}`)
+        .send({
+          email: testEmail3,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.email).to.be.testEmail3;
+        })
         .end(done);
     });
   });
@@ -370,7 +401,7 @@ describe('/users router', () => {
 
     const assertRequest = body => request(app)
       .post(url)
-      .set('Authorization', `Bearer ${testAccessToken}`)
+      .set('Authorization', `Bearer ${testAccessToken1}`)
       .send(body);
 
     before(() => {
@@ -440,7 +471,7 @@ describe('/users router', () => {
     it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456${params}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(401)
         .expect({ error: 'Invalid credentials' })
         .end(done);
@@ -450,7 +481,7 @@ describe('/users router', () => {
       const fromDate = `${yesterday.getMonth() + 1}-${yesterday.getDate()}-${yesterday.getFullYear()}`;
       request(app)
         .get(`${url}/${userFixture._id}?from=${fromDate}&to=${today.toISOString()}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(400)
         .end(done);
     });
@@ -459,7 +490,7 @@ describe('/users router', () => {
       const toDate = `${today.getMonth() + 1}-${today.getDate()}-${today.getFullYear()}`;
       request(app)
         .get(`${url}/${userFixture._id}?from=${yesterday.toISOString()}&to=${toDate}}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(400)
         .end(done);
     });
@@ -467,7 +498,7 @@ describe('/users router', () => {
     it('should return an array', (done) => {
       request(app)
         .get(`${url}/${userFixture._id}${params}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).to.be.instanceOf(Array);
