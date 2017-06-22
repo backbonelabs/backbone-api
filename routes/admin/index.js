@@ -6,6 +6,7 @@ import logout from './logout';
 import getUser from '../users/getUser';
 import getUsers from './getUsers';
 import updateUser from '../users/updateUser';
+import updateUserSettings from '../users/updateUserSettings';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.post('/logout', handleRoute(logout));
 router.get('/users', requireAdminAuth, handleRoute(getUsers));
 router.get('/users/:id', requireAdminAuth, handleRoute(getUser));
 router.post('/users/:id', requireAdminAuth, handleRoute(updateUser));
+router.post('/users/settings/:id', requireAdminAuth, handleRoute(updateUserSettings));
 
 export default router;
