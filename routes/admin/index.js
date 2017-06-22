@@ -3,7 +3,6 @@ import handleRoute from '../../lib/handleRoute';
 import requireAdminAuth from '../../lib/requireAdminAuth';
 import login from './login';
 import logout from './logout';
-import getUser from '../users/getUser';
 import getUsers from './getUsers';
 import getUser from '../users/getUser';
 import updateUser from '../users/updateUser';
