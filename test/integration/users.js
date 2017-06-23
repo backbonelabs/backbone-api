@@ -122,12 +122,14 @@ describe('/users router', () => {
       const noAtSymbol = 'bb.com';
       const noLocal = '@b.com';
       const noDomain = 'b@';
+      const noTld = 'a@b';
 
       return Promise.all([
         assert400Request(Object.assign({ email: simpleWord }, passwords)),
         assert400Request(Object.assign({ email: noAtSymbol }, passwords)),
         assert400Request(Object.assign({ email: noLocal }, passwords)),
         assert400Request(Object.assign({ email: noDomain }, passwords)),
+        assert400Request(Object.assign({ email: noTld }, passwords)),
       ]);
     });
 
