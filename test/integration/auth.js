@@ -144,12 +144,14 @@ describe('/auth router', () => {
       const noAtSymbol = 'bb.com';
       const noLocal = '@b.com';
       const noDomain = 'b@';
+      const noTld = 'a@b';
 
       return Promise.all([
         assertRequestStatusCode(400, Object.assign({ email: simpleWord }, password)),
         assertRequestStatusCode(400, Object.assign({ email: noAtSymbol }, password)),
         assertRequestStatusCode(400, Object.assign({ email: noLocal }, password)),
         assertRequestStatusCode(400, Object.assign({ email: noDomain }, password)),
+        assertRequestStatusCode(400, Object.assign({ email: noTld }, password)),
       ]);
     });
 

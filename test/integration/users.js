@@ -12,15 +12,18 @@ import EmailUtility from '../../lib/EmailUtility';
 let emailUtility;
 let app;
 let db;
-let userFixture = {};
+let userFixture1 = {};
+let userFixture2 = {};
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
+const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
-const testAccessToken = randomString({ length: 64 });
+const testAccessToken1 = randomString({ length: 64 });
+const testAccessToken2 = randomString({ length: 64 });
 const userIdsToDelete = [];
-const accessTokensToDelete = [testAccessToken];
+const accessTokensToDelete = [testAccessToken1, testAccessToken2];
 
 before(() => (
   Promise.resolve(server)
@@ -38,20 +41,29 @@ before(() => (
           email: testEmail1,
           password: testPasswordHash,
         }),
+        mergeWithDefaultData({
+          email: testEmail2,
+          password: testPasswordHash,
+        }),
       ])
     ))
     .then((results) => {
       const { ops } = results;
-      userFixture = ops[0];
-      userFixture._id = userFixture._id.toHexString();
-      userIdsToDelete.push(userFixture._id);
+      userFixture1 = ops[0];
+      userFixture2 = ops[1];
+      userFixture1._id = userFixture1._id.toHexString();
+      userFixture2._id = userFixture2._id.toHexString();
+      userIdsToDelete.push(userFixture1._id, userFixture2._id);
     })
     .then(() => (
       db.collection('accessTokens')
-        .insertOne({
-          userId: mongodb.ObjectID(userFixture._id),
-          accessToken: testAccessToken,
-        })
+        .insertMany([{
+          userId: mongodb.ObjectID(userFixture1._id),
+          accessToken: testAccessToken1,
+        }, {
+          userId: mongodb.ObjectID(userFixture2._id),
+          accessToken: testAccessToken2,
+        }])
     ))
 ));
 
@@ -110,12 +122,14 @@ describe('/users router', () => {
       const noAtSymbol = 'bb.com';
       const noLocal = '@b.com';
       const noDomain = 'b@';
+      const noTld = 'a@b';
 
       return Promise.all([
         assert400Request(Object.assign({ email: simpleWord }, passwords)),
         assert400Request(Object.assign({ email: noAtSymbol }, passwords)),
         assert400Request(Object.assign({ email: noLocal }, passwords)),
         assert400Request(Object.assign({ email: noDomain }, passwords)),
+        assert400Request(Object.assign({ email: noTld }, passwords)),
       ]);
     });
 
@@ -133,7 +147,7 @@ describe('/users router', () => {
     });
 
     it('should reject when email is already taken', () => assert400Request({
-      email: userFixture.email,
+      email: userFixture1.email,
       password: testPassword,
     }));
 
@@ -200,7 +214,7 @@ describe('/users router', () => {
 
     it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}`)
+        .get(`${url}/${userFixture1._id}`)
         .send({})
         .expect(401)
         .end(done);
@@ -208,7 +222,7 @@ describe('/users router', () => {
 
     it('should respond with 401 on invalid access token', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}`)
+        .get(`${url}/${userFixture1._id}`)
         .set('Authorization', 'Bearer 123')
         .send({})
         .expect(401)
@@ -218,7 +232,7 @@ describe('/users router', () => {
     it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(401)
         .expect({ error: 'Invalid credentials' })
         .end(done);
@@ -226,8 +240,8 @@ describe('/users router', () => {
 
     it('should return a user object without password data', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).to.not.have.ownProperty('password');
@@ -241,11 +255,11 @@ describe('/users router', () => {
 
     const assertRequest = body => request(app)
       .post(url)
-      .set('Authorization', `Bearer ${testAccessToken}`)
+      .set('Authorization', `Bearer ${testAccessToken1}`)
       .send(body);
 
     before(() => {
-      url = `/users/${userFixture._id}`;
+      url = `/users/${userFixture1._id}`;
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
@@ -282,7 +296,7 @@ describe('/users router', () => {
     it('should not update users if access token does not belong to the user id', (done) => {
       request(app)
         .post('/users/123456789012')
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .send({ email: 'new@email.com' })
         .expect(401)
         .expect({ error: 'Invalid credentials' })
@@ -290,15 +304,26 @@ describe('/users router', () => {
     });
 
     it('should update non-password fields', (done) => {
-      const newEmail = `aaa${userFixture.email}`;
+      const newEmail = `aaa${userFixture1.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
         .expect((res) => {
           const { body } = res;
-          expect(body._id).to.equal(userFixture._id);
+          expect(body._id).to.equal(userFixture1._id);
           expect(body.email).to.equal(newEmail);
           expect(body.password).to.not.exist;
+          userFixture1.email = newEmail;
         })
+        .end(done);
+    });
+
+    it('should not allow an email update if the email is taken by another user', (done) => {
+      const newEmail = userFixture1.email;
+      request(app)
+        .post(`/users/${userFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken2}`)
+        .send({ email: newEmail })
+        .expect(400)
         .end(done);
     });
 
@@ -313,7 +338,7 @@ describe('/users router', () => {
           .expect(200)
           .expect((res) => {
             const { body } = res;
-            expect(body._id).to.equal(userFixture._id);
+            expect(body._id).to.equal(userFixture1._id);
             expect(body.password).to.not.exist;
           })
           .end((err, res) => {
@@ -326,7 +351,7 @@ describe('/users router', () => {
       })
         .then(() => (
           db.collection('users')
-            .findOne({ _id: mongodb.ObjectID(userFixture._id) })
+            .findOne({ _id: mongodb.ObjectID(userFixture1._id) })
         ))
         .then(user => bcrypt.compareSync(newPassword, user.password))
         .then((isPasswordMatches) => {
@@ -340,11 +365,11 @@ describe('/users router', () => {
 
     const assertRequest = body => request(app)
       .post(url)
-      .set('Authorization', `Bearer ${testAccessToken}`)
+      .set('Authorization', `Bearer ${testAccessToken1}`)
       .send(body);
 
     before(() => {
-      url = `/users/settings/${userFixture._id}`;
+      url = `/users/settings/${userFixture1._id}`;
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
@@ -392,7 +417,7 @@ describe('/users router', () => {
 
     it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}${params}`)
+        .get(`${url}/${userFixture1._id}${params}`)
         .send({})
         .expect(401)
         .end(done);
@@ -400,7 +425,7 @@ describe('/users router', () => {
 
     it('should respond with 401 on invalid access token', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}${params}`)
+        .get(`${url}/${userFixture1._id}${params}`)
         .set('Authorization', 'Bearer 123')
         .send({})
         .expect(401)
@@ -410,7 +435,7 @@ describe('/users router', () => {
     it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
         .get(`${url}/abcdef123456abcdef123456${params}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(401)
         .expect({ error: 'Invalid credentials' })
         .end(done);
@@ -419,8 +444,8 @@ describe('/users router', () => {
     it('should respond with a 400 if `from` query is not in ISO 8601', (done) => {
       const fromDate = `${yesterday.getMonth() + 1}-${yesterday.getDate()}-${yesterday.getFullYear()}`;
       request(app)
-        .get(`${url}/${userFixture._id}?from=${fromDate}&to=${today.toISOString()}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .get(`${url}/${userFixture1._id}?from=${fromDate}&to=${today.toISOString()}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(400)
         .end(done);
     });
@@ -428,16 +453,16 @@ describe('/users router', () => {
     it('should respond with a 400 if `to` query is not in ISO 8601', (done) => {
       const toDate = `${today.getMonth() + 1}-${today.getDate()}-${today.getFullYear()}`;
       request(app)
-        .get(`${url}/${userFixture._id}?from=${yesterday.toISOString()}&to=${toDate}}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .get(`${url}/${userFixture1._id}?from=${yesterday.toISOString()}&to=${toDate}}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(400)
         .end(done);
     });
 
     it('should return an array', (done) => {
       request(app)
-        .get(`${url}/${userFixture._id}${params}`)
-        .set('Authorization', `Bearer ${testAccessToken}`)
+        .get(`${url}/${userFixture1._id}${params}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).to.be.instanceOf(Array);
