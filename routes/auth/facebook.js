@@ -63,21 +63,31 @@ export default (req, res) => validate(req.body, {
       throw new Error(errorMessages.unverifiedFacebook);
     }
     // Check if the requested app ID is valid against our own env app ID.
-    if (reqAppId !== envAppId) {
+    if (reqAppId.toString() !== envAppId.toString()) {
       throw new Error(errorMessages.invalidCredentials);
     }
-
     // Checks if the requested access token is valid by verify the application ID,
     // user ID, and is_valid against data from Facebook servers.
     return request(options)
       .then((result) => {
+        // Throw an error if Facebook returns any authorization errors
+        // Facebook error code for invalid user access token:
+        // { code: 190, message: 'Invalid OAuth access token.' }
+        if (result.data.error) {
+          if (result.data.error.code === 190) {
+            throw new Error(errorMessages.invalidCredentials);
+          }
+          throw new Error(result.data.error);
+        }
+
         const {
           app_id: debugTokenAppId,
           is_valid: debugTokenIsValid,
           user_id: debugTokenUserId,
         } = result.data;
-        if (debugTokenAppId !== envAppId ||
-            debugTokenUserId !== reqUserId ||
+
+        if (debugTokenAppId.toString() !== envAppId.toString() ||
+            debugTokenUserId.toString() !== reqUserId.toString() ||
             !debugTokenIsValid) {
           throw new Error(errorMessages.invalidCredentials);
         }
