@@ -442,8 +442,10 @@ describe('/auth router', () => {
             'authMethod',
             'facebookId',
             'isNew',
+            'email',
             'isConfirmed']);
           expect(res.body.authMethod).to.equal(2);
+          expect(res.body.email).to.be.null;
           expect(res.body.isConfirmed).to.be.true;
           expect(res.body.isNew).to.be.true;
           expect(res.body).to.not.contain.all.keys(['password']);

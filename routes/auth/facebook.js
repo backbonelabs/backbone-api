@@ -94,8 +94,10 @@ export default (req, res) => validate(req.body, {
       });
   })
   .then(() => {
+    // Defines email as null if the Facebook users uses a phone number instead
+    // email as login.
+    const email = req.body.email || null;
     const {
-      email,
       gender,
       first_name: firstName,
       last_name: lastName,
