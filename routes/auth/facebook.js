@@ -70,14 +70,14 @@ export default (req, res) => validate(req.body, {
     // user ID, and is_valid against data from Facebook servers.
     return request(options)
       .then((result) => {
-        // Throw an error if Facebook returns any authorization errors
-        // Facebook error code for invalid user access token:
-        // { code: 190, message: 'Invalid OAuth access token.' }
+        // Throw an error if Facebook returns any errors.
         if (result.data.error) {
+          // Facebook error code for invalid user access token:
+          // { code: 190, message: 'Invalid OAuth access token.' }
           if (result.data.error.code === 190) {
             throw new Error(errorMessages.invalidCredentials);
           }
-          throw new Error(result.data.error);
+          throw new Error(result.data.error.message);
         }
 
         const {
@@ -86,18 +86,21 @@ export default (req, res) => validate(req.body, {
           user_id: debugTokenUserId,
         } = result.data;
 
-        if (debugTokenAppId.toString() !== envAppId.toString() ||
-            debugTokenUserId.toString() !== reqUserId.toString() ||
-            !debugTokenIsValid) {
+        if (debugTokenIsValid) {
+          // Token is valid so we continue to check app and user Id
+          if (debugTokenAppId.toString() !== envAppId.toString() ||
+              debugTokenUserId.toString() !== reqUserId.toString()) {
+            throw new Error(errorMessages.invalidCredentials);
+          }
+        } else {
+          // Token is not valid
           throw new Error(errorMessages.invalidCredentials);
         }
       });
   })
   .then(() => {
-    // Defines email as null if the Facebook users uses a phone number instead
-    // email as login.
-    const email = req.body.email || null;
     const {
+      email = null, // FB user logs in with phone number instead of email
       gender,
       first_name: firstName,
       last_name: lastName,
@@ -187,7 +190,11 @@ export default (req, res) => validate(req.body, {
   .catch((err) => {
     Object.keys(errorMessages).forEach((key) => {
       if (errorMessages[key] === err.message) {
-        res.status(401);
+        if (key === 'invalidCredentials') {
+          res.status(401);
+        } else {
+          res.status(403);
+        }
       }
     });
     throw err;

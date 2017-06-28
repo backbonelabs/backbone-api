@@ -264,7 +264,7 @@ describe('/auth router', () => {
     });
 
     // Email confirmation checks for existing users with email and password
-    it('should reject Facebook login when existing email is not confirmed', () => assertRequestStatusCode(401, {
+    it('should reject Facebook login when existing email is not confirmed', () => assertRequestStatusCode(403, {
       email: testEmail5,
       accessToken: validFBAccessToken.testUser1,
       applicationID: validFBAppId,
@@ -382,7 +382,7 @@ describe('/auth router', () => {
       id: validFBUserId.testUser1,
     }));
 
-    it('should reject when verified is false', () => assertRequestStatusCode(401, {
+    it('should reject when Facebook user is not verified', () => assertRequestStatusCode(403, {
       email: testEmail7,
       accessToken: validFBAccessToken.testUser1,
       applicationID: validFBAppId,
