@@ -12,7 +12,7 @@ import constants from '../../lib/constants';
 const debug = Debug('routes:auth:facebook');
 const errorMessages = {
   invalidCredentials: 'Invalid credentials. Please try again.',
-  unverifiedFacebook: 'A verified Facebook account is required to register.',
+  unverifiedFacebook: 'Please verify your account through Facebook before continuing.',
   unconfirmedEmail: 'An account has already been registered with the same email ' +
     'address as your Facebook account. Please check your email to confirm your ' +
     'email address. If you have any questions, please contact support@gobackbone.com.',
