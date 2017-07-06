@@ -68,7 +68,6 @@ before(() => (
     ))
     .then((results) => {
       const { ops } = results;
-
       userFixture1 = ops[0];
       userFixture2 = ops[1];
       userFixture1._id = userFixture1._id.toHexString();

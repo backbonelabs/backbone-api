@@ -74,6 +74,7 @@ export default (req) => {
         if (pw !== verifyPassword) {
           throw new Error('Passwords must match');
         }
+
         if (user.authMethod !== constants.authMethods.EMAIL) {
           throw new Error('Password change is not allowed');
         }
