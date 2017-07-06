@@ -35,7 +35,23 @@ export default (req) => {
     password: schemas.password,
     verifyPassword: schemas.password,
   }), [], ['_id'])
-    .then(() => {
+    .then(() => (
+      // Make sure user exists
+      dbManager.getDb()
+        .collection('users')
+        .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
+        .limit(1)
+        .next()
+        .then((user) => {
+          if (user) {
+            debug('Found user by id', req.params.id);
+            return user;
+          }
+          debug('Did not find user by id', req.params.id);
+          throw new Error('Invalid user id');
+        })
+    ))
+    .then((user) => {
       const {
         password: pw,
         verifyPassword,
@@ -58,55 +74,41 @@ export default (req) => {
         if (pw !== verifyPassword) {
           throw new Error('Passwords must match');
         }
-        return dbManager.getDb()
-          .collection('users')
-          .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
-          .limit(1)
-          .next()
-          .then((user) => {
-            if (user) {
-              debug('Found user by id', req.params.id);
-              if (user.authMethod !== constants.authMethods.EMAIL) {
-                throw new Error('Password change is not allowed');
-              }
-              return user;
+        if (user.authMethod !== constants.authMethods.EMAIL) {
+          throw new Error('Password change is not allowed');
+        }
+
+        return password.verify(currentPassword, user.password)
+          .then((isPasswordMatch) => {
+            // If password doesn't match
+            if (!isPasswordMatch) {
+              debug('Invalid password');
+              throw new Error('Current password is incorrect');
             }
-            debug('Did not find user by id', req.params.id);
-            throw new Error('Invalid user id');
-          })
-        .then(user => (
-          // Verify password matches
-          password.verify(currentPassword, user.password)
-        ))
-        .then((isPasswordMatch) => {
-          // If password doesn't match
-          if (!isPasswordMatch) {
-            debug('Invalid password');
-            throw new Error('Current password is incorrect');
-          }
-          // Hash password
-          return password.hash(pw)
-            .then((hash) => {
-              body.password = hash;
-              return body;
-            });
-        });
+            // Hash password
+            return password.hash(pw)
+              .then((hash) => {
+                body.password = hash;
+                return [user, body];
+              });
+          });
       }
 
-      return body;
+      return [user, body];
     })
-    .then((body) => {
+    .then(([user, body]) => {
       const { email } = body;
 
+
       // Check if email is already taken
-      if (email) {
+      if (email && email !== user.email && user.email !== null) {
         return dbManager.getDb()
         .collection('users')
         .find({ email: new RegExp(`^${email}$`, 'i') })
         .limit(1)
         .next()
-        .then((user) => {
-          if (user) {
+        .then((userWithEmail) => {
+          if (userWithEmail) {
             throw new Error('Email already taken');
           }
           return tokenFactory.generateToken()
