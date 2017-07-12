@@ -102,7 +102,7 @@ export default (req) => {
 
 
       // Check if email is already taken
-      if (email && email !== user.email && user.email !== null) {
+      if (email && email !== user.email) {
         return dbManager.getDb()
         .collection('users')
         .find({ email: new RegExp(`^${email}$`, 'i') })
