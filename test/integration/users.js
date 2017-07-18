@@ -8,6 +8,7 @@ import server from '../../index';
 import userDefaults from '../../lib/userDefaults';
 import constants from '../../lib/constants';
 import EmailUtility from '../../lib/EmailUtility';
+import tokenFactory from '../../lib/tokenFactory';
 
 let emailUtility;
 let app;
@@ -19,6 +20,13 @@ const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
+const testFirstName = randomString();
+const testLastName = randomString();
+const testNickname = randomString();
+const testGender = 1;
+const testWeight = 100;
+const testBirthdate = (new Date()).toISOString();
+const testHeight = 100;
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken1 = randomString({ length: 64 });
 const testAccessToken2 = randomString({ length: 64 });
@@ -252,6 +260,18 @@ describe('/users router', () => {
 
   describe('POST /:id', () => {
     let url;
+    let sendConfirmationEmailStub;
+    let generateTokenStub;
+
+    beforeEach(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendConfirmationEmailStub = sinon
+        .stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
+    });
 
     const assertRequest = body => request(app)
       .post(url)
@@ -260,6 +280,8 @@ describe('/users router', () => {
 
     before(() => {
       url = `/users/${userFixture1._id}`;
+      generateTokenStub = sinon
+        .spy(tokenFactory, 'generateToken');
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
@@ -303,7 +325,21 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should update non-password fields', (done) => {
+    it('should not allow an email update if the email is taken by another user', (done) => {
+      const newEmail = userFixture1.email;
+      request(app)
+        .post(`/users/${userFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken2}`)
+        .send({ email: newEmail })
+        .expect(400)
+        .expect(() => {
+          expect(sendConfirmationEmailStub.callCount).to.equal(0);
+        })
+        .end(done);
+    });
+
+
+    it('should update email address', (done) => {
       const newEmail = `aaa${userFixture1.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
@@ -312,18 +348,88 @@ describe('/users router', () => {
           expect(body._id).to.equal(userFixture1._id);
           expect(body.email).to.equal(newEmail);
           expect(body.password).to.not.exist;
+          expect(sendConfirmationEmailStub.callCount).to.equal(1);
+          expect(generateTokenStub.callCount).to.equal(1);
           userFixture1.email = newEmail;
         })
         .end(done);
     });
 
-    it('should not allow an email update if the email is taken by another user', (done) => {
-      const newEmail = userFixture1.email;
-      request(app)
-        .post(`/users/${userFixture2._id}`)
-        .set('Authorization', `Bearer ${testAccessToken2}`)
-        .send({ email: newEmail })
-        .expect(400)
+    it('should update first name', (done) => {
+      assertRequest({ firstName: testFirstName })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.firstName).to.equal(testFirstName);
+        })
+        .end(done);
+    });
+
+    it('should update last name', (done) => {
+      assertRequest({ lastName: testLastName })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.lastName).to.equal(testLastName);
+        })
+        .end(done);
+    });
+
+    it('should update nickname', (done) => {
+      assertRequest({ nickname: testNickname })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.nickname).to.equal(testNickname);
+        })
+        .end(done);
+    });
+
+    it('should update gender', (done) => {
+      assertRequest({ gender: testGender })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.gender).to.equal(testGender);
+        })
+        .end(done);
+    });
+
+    it('should update height', (done) => {
+      assertRequest({ height: testHeight })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.height).to.equal(testHeight);
+        })
+        .end(done);
+    });
+
+    it('should update weight', (done) => {
+      assertRequest({ weight: testWeight })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.weight).to.equal(testWeight);
+        })
+        .end(done);
+    });
+
+    it('should update birthdate', (done) => {
+      assertRequest({ birthdate: testBirthdate })
+        .expect(200)
+        .expect((res) => {
+          // console.log(res);
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.birthdate).to.equal(testBirthdate);
+        })
         .end(done);
     });
 
