@@ -1,3 +1,4 @@
+import mongodb from 'mongodb';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -6,6 +7,11 @@ import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
 import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
+
+// Short of using Redis or an external cache, we store the default training plan
+// data in local memory so we don't have to continuously make database calls
+// to retrieve the information since it won't change often
+let defaultTrainingPlans = [];
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -43,6 +49,21 @@ export default req => validate(req.body, {
         }
       })
   ))
+  .then((hash) => {
+    // Make sure the home and work training plans are stored in memory
+    if (defaultTrainingPlans.length) {
+      return hash;
+    }
+
+    return dbManager.getDb()
+      .collection('trainingPlans')
+      .find({ name: { $in: ['Home', 'Work'] } })
+      .toArray()
+      .then((trainingPlans) => {
+        defaultTrainingPlans = trainingPlans;
+        return hash;
+      });
+  })
   .then(hash => (
     // Generate token and token expiry for use in confirming user email
     tokenFactory.generateToken()
@@ -55,6 +76,7 @@ export default req => validate(req.body, {
             createdAt: new Date(),
             confirmationToken,
             confirmationTokenExpiry,
+            trainingPlans: defaultTrainingPlans.map(plan => plan._id),
           }))
           .then((result) => {
             // Initiate sending of user confirmation email
