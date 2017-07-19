@@ -14,7 +14,7 @@ let app;
 let db;
 let userFixture1 = {};
 let userFixture2 = {};
-let homeWorkTrainingPlanIds = [];
+let homeAndWorkTrainingPlans = [];
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
@@ -40,7 +40,7 @@ before(() => (
         .find({ name: { $in: ['Home', 'Work'] } })
         .toArray()
         .then((trainingPlans) => {
-          homeWorkTrainingPlanIds = trainingPlans.map(plan => plan._id.toHexString());
+          homeAndWorkTrainingPlans = trainingPlans;
         })
     ))
     .then(() => (
@@ -207,7 +207,13 @@ describe('/users router', () => {
             'slouchTimeThreshold',
             'slouchNotification',
           );
-          expect(res.body.user.trainingPlans).to.have.members(homeWorkTrainingPlanIds);
+
+          const homeAndWorkTrainingPlanIds =
+            homeAndWorkTrainingPlans.map(plan => plan._id.toHexString());
+
+          res.body.user.trainingPlans.forEach((plan) => {
+            expect(plan._id).to.be.oneOf(homeAndWorkTrainingPlanIds);
+          });
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
           expect(sendConfirmationEmailStub.callCount).to.equal(1);

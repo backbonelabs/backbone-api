@@ -1,4 +1,3 @@
-import mongodb from 'mongodb';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -7,11 +6,9 @@ import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
 import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
+import trainingPlans from '../../lib/trainingPlans';
 
-// Short of using Redis or an external cache, we store the default training plan
-// data in local memory so we don't have to continuously make database calls
-// to retrieve the information since it won't change often
-let defaultTrainingPlans = [];
+const { getTrainingPlans, mapObjectIdsToDocuments } = trainingPlans;
 
 /**
  * Creates a new user after checking there are no existing users with the same email
@@ -49,26 +46,23 @@ export default req => validate(req.body, {
         }
       })
   ))
-  .then((hash) => {
-    // Make sure the home and work training plans are stored in memory
-    if (defaultTrainingPlans.length) {
-      return hash;
-    }
-
-    return dbManager.getDb()
-      .collection('trainingPlans')
-      .find({ name: { $in: ['Home', 'Work'] } })
-      .toArray()
-      .then((trainingPlans) => {
-        defaultTrainingPlans = trainingPlans;
-        return hash;
-      });
-  })
   .then(hash => (
-    // Generate token and token expiry for use in confirming user email
-    tokenFactory.generateToken()
-      .then(([confirmationToken, confirmationTokenExpiry]) => (
-        dbManager.getDb()
+    Promise.all([
+      // Generate token and token expiry for use in confirming user email
+      tokenFactory.generateToken(),
+      // Retrieve training plan data
+      getTrainingPlans(),
+    ])
+      .then(([
+        [confirmationToken, confirmationTokenExpiry],
+        plans,
+      ]) => {
+        // Get home and work training plans to assign to user
+        const homeAndWorkTrainingPlans = plans
+          .filter(plan => plan.name === 'Home' || plan.name === 'Work')
+          .map(plan => plan._id);
+
+        return dbManager.getDb()
           .collection('users')
           .insertOne(userDefaults.mergeWithDefaultData({
             email: req.body.email,
@@ -76,7 +70,7 @@ export default req => validate(req.body, {
             createdAt: new Date(),
             confirmationToken,
             confirmationTokenExpiry,
-            trainingPlans: defaultTrainingPlans.map(plan => plan._id),
+            trainingPlans: homeAndWorkTrainingPlans,
           }))
           .then((result) => {
             // Initiate sending of user confirmation email
@@ -86,19 +80,20 @@ export default req => validate(req.body, {
               .then(() => tokenFactory.createAccessToken())
               // Return result from inserting user and accessToken
               .then(accessToken => [result, accessToken]);
-          })
-      ))
+          });
+      })
   ))
   .then(([result, accessToken]) => {
     const { ops, insertedId: userId } = result;
+    const user = sanitizeUser(ops[0]);
+    user.trainingPlans = mapObjectIdsToDocuments(user.trainingPlans);
+
     // Store accessToken along with userId
     return dbManager.getDb()
       .collection('accessTokens')
       .insertOne({ userId, accessToken })
-      .then(() => (
-        {
-          user: sanitizeUser(ops[0]),
-          accessToken,
-        }
-      ));
+      .then(() => ({
+        user,
+        accessToken,
+      }));
   });
