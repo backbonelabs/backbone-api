@@ -1,11 +1,13 @@
 import { expect } from 'chai';
 import { MongoClient } from 'mongodb';
 import randomString from 'random-string';
-import trainingPlans from '../../../lib/trainingPlans';
+import {
+  getTrainingPlans,
+  mapObjectIdsToDocuments,
+} from '../../../lib/trainingPlans';
 
 let db;
 
-const { getTrainingPlans, mapObjectIdsToDocuments } = trainingPlans;
 const testPlanName1 = randomString();
 const testPlanName2 = randomString();
 const testTrainingPlans = [{
@@ -88,7 +90,7 @@ after(() => (
     })
 ));
 
-describe('trainingPlan module', () => {
+describe('trainingPlans module', () => {
   describe('getTrainingPlans', () => {
     it('should be a function', () => {
       expect(getTrainingPlans).to.be.a('function');

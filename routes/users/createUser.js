@@ -6,9 +6,10 @@ import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
 import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
-import trainingPlans from '../../lib/trainingPlans';
-
-const { getTrainingPlans, mapObjectIdsToDocuments } = trainingPlans;
+import {
+  getTrainingPlans,
+  mapObjectIdsToDocuments,
+} from '../../lib/trainingPlans';
 
 /**
  * Creates a new user after checking there are no existing users with the same email

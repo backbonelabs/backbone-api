@@ -3,7 +3,7 @@ import express from 'express';
 import bugsnag from 'bugsnag';
 import bodyParser from 'body-parser';
 import dbManager from './lib/dbManager';
-import trainingPlans from './lib/trainingPlans';
+import { getTrainingPlans } from './lib/trainingPlans';
 import adminRouter from './routes/admin';
 import authRouter from './routes/auth';
 import firmwareRouter from './routes/firmware';
@@ -50,12 +50,12 @@ export default dbManager.init({
     },
   },
 })
-  .then(trainingPlans.getTrainingPlans) // Fetch and store training plan data
+  .then(getTrainingPlans) // Fetch and store training plan data
   .then(() => {
     // Cheap version of an expiring cache for retrieving the
     // latest training plan data every 10 minutes
     setInterval(() => {
-      trainingPlans.getTrainingPlans(true);
+      getTrainingPlans(true);
     }, 1000 * 60 * 10);
 
     // Register route handlers
