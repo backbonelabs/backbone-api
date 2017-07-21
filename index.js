@@ -58,7 +58,7 @@ export default dbManager.init({
     setInterval(() => {
       getWorkouts(true)
         .then(() => {
-          getTrainingPlans();
+          getTrainingPlans(true);
         });
     }, 1000 * 60 * 10);
 
