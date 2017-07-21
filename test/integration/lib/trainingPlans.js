@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb';
 import randomString from 'random-string';
 import {
   getTrainingPlans,
-  mapObjectIdsToDocuments,
+  mapTrainingPlanIdsToDocuments,
 } from '../../../lib/trainingPlans';
 
 let db;
@@ -106,13 +106,13 @@ describe('trainingPlans module', () => {
     ));
   });
 
-  describe('mapObjectIdsToDocuments', () => {
+  describe('mapTrainingPlanIdsToDocuments', () => {
     it('should be a function', () => {
-      expect(mapObjectIdsToDocuments).to.be.a('function');
+      expect(mapTrainingPlanIdsToDocuments).to.be.a('function');
     });
 
     it('should return training plan documents for ObjectIDs', () => {
-      const docs = mapObjectIdsToDocuments(trainingPlanFixtures.map(plan => plan._id));
+      const docs = mapTrainingPlanIdsToDocuments(trainingPlanFixtures.map(plan => plan._id));
       expect(docs).to.deep.equal(testTrainingPlans);
     });
   });

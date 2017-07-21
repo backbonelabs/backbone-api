@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
-import { mapObjectIdsToDocuments } from '../../lib/trainingPlans';
+import { mapTrainingPlanIdsToDocuments } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:admin:getUsers');
 
@@ -38,7 +38,7 @@ export default (req) => {
         // Add training plan details
         .map(user => ({
           ...user,
-          trainingPlans: mapObjectIdsToDocuments(user.trainingPlans),
+          trainingPlans: mapTrainingPlanIdsToDocuments(user.trainingPlans),
         }))
     ));
 };

@@ -8,7 +8,7 @@ import userDefaults from '../../lib/userDefaults';
 import sanitizeUser from '../../lib/sanitizeUser';
 import {
   getTrainingPlans,
-  mapObjectIdsToDocuments,
+  mapTrainingPlanIdsToDocuments,
 } from '../../lib/trainingPlans';
 
 /**
@@ -87,7 +87,7 @@ export default req => validate(req.body, {
   .then(([result, accessToken]) => {
     const { ops, insertedId: userId } = result;
     const user = sanitizeUser(ops[0]);
-    user.trainingPlans = mapObjectIdsToDocuments(user.trainingPlans);
+    user.trainingPlans = mapTrainingPlanIdsToDocuments(user.trainingPlans);
 
     // Store accessToken along with userId
     return dbManager.getDb()

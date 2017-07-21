@@ -1,6 +1,6 @@
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
-import { mapObjectIdsToDocuments } from '../../lib/trainingPlans';
+import { mapTrainingPlanIdsToDocuments } from '../../lib/trainingPlans';
 
 /**
  * Returns a user profile
@@ -22,7 +22,7 @@ export default (req) => {
         const sanitizedUser = sanitizeUser(user);
 
         // Add training plan details
-        sanitizedUser.trainingPlans = mapObjectIdsToDocuments(user.trainingPlans);
+        sanitizedUser.trainingPlans = mapTrainingPlanIdsToDocuments(user.trainingPlans);
 
         return sanitizedUser;
       }
