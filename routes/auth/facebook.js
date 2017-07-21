@@ -101,11 +101,17 @@ export default (req, res) => validate(req.body, {
   .then(() => {
     const {
       email = null, // FB user logs in with phone number instead of email
-      gender,
       first_name: firstName,
       last_name: lastName,
       id: facebookId,
     } = req.body;
+
+    // Handles weather user is male, female, or other.  Facebook will ommit
+    // gender in the req.body if other.
+    let gender = 3;
+    if (req.body.gender) {
+      gender = req.body.gender === 'male' ? 1 : 2;
+    }
 
     // Check if there is already a user with existing email or facebookUserID
     return dbManager.getDb()
@@ -125,7 +131,7 @@ export default (req, res) => validate(req.body, {
               lastName,
               facebookId,
               nickname: firstName,
-              gender: (gender === 'male' ? 1 : 2),
+              gender,
               isConfirmed: true,
               authMethod: constants.authMethods.FACEBOOK,
               createdAt: new Date(),
