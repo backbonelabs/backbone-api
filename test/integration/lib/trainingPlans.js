@@ -28,29 +28,38 @@ const testTrainingPlans = [{
   levels: [
     [
       [{
-        title: `${testPlanName1} Level 1 Session 1 Exercise 1`,
+        title: `${testPlanName1} Level 1 Session 1 Workout 1`,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
+      }, {
+        title: `${testPlanName1} Level 1 Session 1 Workout 2`,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
+      }, {
+        title: `${testPlanName1} Level 1 Session 1 Workout 3`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
-        title: `${testPlanName1} Level 1 Session 2 Exercise 1`,
+        title: `${testPlanName1} Level 1 Session 2 Workout 1`,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
+      }, {
+        title: `${testPlanName1} Level 1 Session 2 Workout 2`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
-        title: `${testPlanName1} Level 1 Session 3 Exercise 1`,
+        title: `${testPlanName1} Level 1 Session 3 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
     [
       [{
-        title: `${testPlanName1} Level 2 Session 1 Exercise 1`,
+        title: `${testPlanName1} Level 2 Session 1 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
-        title: `${testPlanName1} Level 2 Session 2 Exercise 1`,
+        title: `${testPlanName1} Level 2 Session 2 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
-        title: `${testPlanName1} Level 2 Session 3 Exercise 1`,
+        title: `${testPlanName1} Level 2 Session 3 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
@@ -60,29 +69,29 @@ const testTrainingPlans = [{
   levels: [
     [
       [{
-        title: `${testPlanName2} Level 1 Session 1 Exercise 1`,
+        title: `${testPlanName2} Level 1 Session 1 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
-        title: `${testPlanName2} Level 1 Session 2 Exercise 1`,
+        title: `${testPlanName2} Level 1 Session 2 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
-        title: `${testPlanName2} Level 1 Session 3 Exercise 1`,
+        title: `${testPlanName2} Level 1 Session 3 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
     [
       [{
-        title: `${testPlanName2} Level 2 Session 1 Exercise 1`,
+        title: `${testPlanName2} Level 2 Session 1 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
-        title: `${testPlanName2} Level 2 Session 2 Exercise 1`,
+        title: `${testPlanName2} Level 2 Session 2 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
-        title: `${testPlanName2} Level 2 Session 3 Exercise 1`,
+        title: `${testPlanName2} Level 2 Session 3 Workout 1`,
         workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
