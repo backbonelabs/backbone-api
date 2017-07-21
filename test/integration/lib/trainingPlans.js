@@ -29,29 +29,29 @@ const testTrainingPlans = [{
     [
       [{
         title: `${testPlanName1} Level 1 Session 1 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
         title: `${testPlanName1} Level 1 Session 2 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
         title: `${testPlanName1} Level 1 Session 3 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
     [
       [{
         title: `${testPlanName1} Level 2 Session 1 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
         title: `${testPlanName1} Level 2 Session 2 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
         title: `${testPlanName1} Level 2 Session 3 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
   ],
@@ -61,29 +61,29 @@ const testTrainingPlans = [{
     [
       [{
         title: `${testPlanName2} Level 1 Session 1 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
         title: `${testPlanName2} Level 1 Session 2 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
         title: `${testPlanName2} Level 1 Session 3 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
     [
       [{
         title: `${testPlanName2} Level 2 Session 1 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[0] later
       }],
       [{
         title: `${testPlanName2} Level 2 Session 2 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[1] later
       }],
       [{
         title: `${testPlanName2} Level 2 Session 3 Exercise 1`,
-        workout: null,
+        workout: null, // this will be replaced with the ObjectID of testWorkouts[2] later
       }],
     ],
   ],
@@ -95,11 +95,13 @@ before(() => (
       db = mDb;
     })
     .then(() => (
+      // Insert test workouts
       db.collection('workouts')
         .insertMany(testWorkouts)
     ))
     .then(() => {
-      // Reference test workout IDs in training plan sessions
+      // Reference the test workout IDs in the test training plan sessions.
+      // The .insertMany call will mutate testWorkouts to add _id to each workout
       testTrainingPlans.forEach((trainingPlan) => {
         trainingPlan.levels.forEach((level) => {
           level.forEach((session, idx) => {
@@ -111,12 +113,14 @@ before(() => (
       });
     })
     .then(() => (
+      // Insert test training plans
       db.collection('trainingPlans')
         .insertMany(testTrainingPlans)
     ))
 ));
 
 after(() => (
+  // Delete test training plans
   db.collection('trainingPlans')
     .deleteMany({
       _id: {
@@ -124,6 +128,7 @@ after(() => (
       },
     })
     .then(() => (
+      // Delete test workouts
       db.collection('workouts')
         .deleteMany({
           _id: {
