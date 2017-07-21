@@ -5,8 +5,8 @@ import {
   fillTrainingPlanWorkouts,
   getTrainingPlans,
   getWorkouts,
-  mapWorkoutIdsToDocuments,
-  mapTrainingPlanIdsToDocuments,
+  mapIdsToWorkouts,
+  mapIdsToTrainingPlans,
 } from '../../../lib/trainingPlans';
 
 let db;
@@ -188,33 +188,33 @@ describe('trainingPlans module', () => {
     });
   });
 
-  describe('mapWorkoutIdsToDocuments', () => {
+  describe('mapIdsToWorkouts', () => {
     it('should be a function', () => {
-      expect(mapWorkoutIdsToDocuments).to.be.a('function');
+      expect(mapIdsToWorkouts).to.be.a('function');
     });
 
     it('should return an array of workout documents for ObjectIDs', () => {
-      const oneWorkout = mapWorkoutIdsToDocuments([testWorkouts[0]._id]);
+      const oneWorkout = mapIdsToWorkouts([testWorkouts[0]._id]);
       expect(oneWorkout).to.deep.equal([testWorkouts[0]]);
 
-      const allWorkouts = mapWorkoutIdsToDocuments(testWorkouts.map(workout => workout._id));
+      const allWorkouts = mapIdsToWorkouts(testWorkouts.map(workout => workout._id));
       expect(allWorkouts).to.deep.equal(testWorkouts);
     });
   });
 
-  describe('mapTrainingPlanIdsToDocuments', () => {
+  describe('mapIdsToTrainingPlans', () => {
     it('should be a function', () => {
-      expect(mapTrainingPlanIdsToDocuments).to.be.a('function');
+      expect(mapIdsToTrainingPlans).to.be.a('function');
     });
 
     it('should return an array of training plan documents for ObjectIDs', () => {
-      const docs = mapTrainingPlanIdsToDocuments(testTrainingPlans.map(plan => plan._id));
+      const trainingPlans = mapIdsToTrainingPlans(testTrainingPlans.map(plan => plan._id));
 
       const testWorkoutNames = [testWorkoutName1, testWorkoutName2, testWorkoutName3];
-      docs.forEach((doc, docIdx) => {
-        expect(doc.name).to.equal(testTrainingPlans[docIdx].name);
+      trainingPlans.forEach((trainingPlan, docIdx) => {
+        expect(trainingPlan.name).to.equal(testTrainingPlans[docIdx].name);
 
-        doc.levels.forEach((level, levelIdx) => {
+        trainingPlan.levels.forEach((level, levelIdx) => {
           level.forEach((session, sessionIdx) => {
             session.forEach((sessionItem, sessionItemIdx) => {
               // Assert session item title

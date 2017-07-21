@@ -5,7 +5,7 @@ import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 import passwordUtil from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
-import { mapTrainingPlanIdsToDocuments } from '../../lib/trainingPlans';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Invalid login credentials. Please try again.';
@@ -74,7 +74,7 @@ export default (req, res) => validate(req.body, {
     // Return sanitized user object with access token and training plan details
     const userResult = sanitizeUser(user);
     userResult.accessToken = accessToken;
-    userResult.trainingPlans = mapTrainingPlanIdsToDocuments(user.trainingPlans);
+    userResult.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
     return userResult;
   })
   .catch((err) => {

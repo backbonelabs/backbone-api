@@ -5,7 +5,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
-import { mapTrainingPlanIdsToDocuments } from '../../lib/trainingPlans';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 import EmailUtility from '../../lib/EmailUtility';
 
 const debug = Debug('routes:users:updateUsers');
@@ -139,7 +139,7 @@ export default (req) => {
       const sanitizedUser = sanitizeUser(user.value);
 
       // Add training plans details
-      sanitizedUser.trainingPlans = mapTrainingPlanIdsToDocuments(user.trainingPlans);
+      sanitizedUser.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
 
       return sanitizedUser;
     });
