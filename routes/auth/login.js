@@ -8,7 +8,7 @@ import tokenFactory from '../../lib/tokenFactory';
 import constants from '../../lib/constants';
 
 const debug = Debug('routes:auth:login');
-const errorMessage = 'Invalid login credentials. Please try again.';
+const errorMessage = 'Incorrect email or password';
 
 /**
  * Verifies a user account by checking the email and password and returns the
@@ -40,7 +40,7 @@ export default (req, res) => validate(req.body, {
         if (user) {
           debug('Found user by email', email);
           if (user.authMethod === constants.authMethods.FACEBOOK) {
-            throw new Error('Please log in using your Facebook account.');
+            throw new Error('Please log in with Facebook');
           }
           return user;
         }
