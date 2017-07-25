@@ -252,13 +252,6 @@ describe('/users router', () => {
   });
 
   describe('POST /:id', () => {
-    const testFirstName = randomString();
-    const testLastName = randomString();
-    const testNickname = randomString();
-    const testGender = 1;
-    const testWeight = 100;
-    const testBirthdate = (new Date()).toISOString();
-    const testHeight = 100;
     let url;
     let sendConfirmationEmailStub;
     let generateTokenStub;
@@ -338,7 +331,6 @@ describe('/users router', () => {
         .end(done);
     });
 
-
     it('should update email address', (done) => {
       const newEmail = `aaa${userFixture1.email}`;
       assertRequest({ email: newEmail })
@@ -356,6 +348,7 @@ describe('/users router', () => {
     });
 
     it('should update first name', (done) => {
+      const testFirstName = randomString();
       assertRequest({ firstName: testFirstName })
         .expect(200)
         .expect((res) => {
@@ -367,6 +360,7 @@ describe('/users router', () => {
     });
 
     it('should update last name', (done) => {
+      const testLastName = randomString();
       assertRequest({ lastName: testLastName })
         .expect(200)
         .expect((res) => {
@@ -378,6 +372,7 @@ describe('/users router', () => {
     });
 
     it('should update nickname', (done) => {
+      const testNickname = randomString();
       assertRequest({ nickname: testNickname })
         .expect(200)
         .expect((res) => {
@@ -389,6 +384,7 @@ describe('/users router', () => {
     });
 
     it('should update gender', (done) => {
+      const testGender = 1;
       assertRequest({ gender: testGender })
         .expect(200)
         .expect((res) => {
@@ -400,6 +396,7 @@ describe('/users router', () => {
     });
 
     it('should update height', (done) => {
+      const testHeight = 100;
       assertRequest({ height: testHeight })
         .expect(200)
         .expect((res) => {
@@ -411,6 +408,7 @@ describe('/users router', () => {
     });
 
     it('should update weight', (done) => {
+      const testWeight = 100;
       assertRequest({ weight: testWeight })
         .expect(200)
         .expect((res) => {
@@ -422,6 +420,7 @@ describe('/users router', () => {
     });
 
     it('should update birthdate', (done) => {
+      const testBirthdate = (new Date()).toISOString();
       assertRequest({ birthdate: testBirthdate })
         .expect(200)
         .expect((res) => {
