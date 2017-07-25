@@ -20,13 +20,6 @@ const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
-const testFirstName = randomString();
-const testLastName = randomString();
-const testNickname = randomString();
-const testGender = 1;
-const testWeight = 100;
-const testBirthdate = (new Date()).toISOString();
-const testHeight = 100;
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken1 = randomString({ length: 64 });
 const testAccessToken2 = randomString({ length: 64 });
@@ -259,6 +252,13 @@ describe('/users router', () => {
   });
 
   describe('POST /:id', () => {
+    const testFirstName = randomString();
+    const testLastName = randomString();
+    const testNickname = randomString();
+    const testGender = 1;
+    const testWeight = 100;
+    const testBirthdate = (new Date()).toISOString();
+    const testHeight = 100;
     let url;
     let sendConfirmationEmailStub;
     let generateTokenStub;
