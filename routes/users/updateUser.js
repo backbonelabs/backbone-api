@@ -139,7 +139,7 @@ export default (req) => {
       const sanitizedUser = sanitizeUser(user.value);
 
       // Add training plans details
-      sanitizedUser.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+      sanitizedUser.trainingPlans = mapIdsToTrainingPlans(sanitizedUser.trainingPlans);
 
       return sanitizedUser;
     });
