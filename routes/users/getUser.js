@@ -1,5 +1,6 @@
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 
 /**
  * Returns a user profile
@@ -17,8 +18,13 @@ export default (req) => {
     .next()
     .then((user) => {
       if (user) {
-        // Return user object without password
-        return sanitizeUser(user);
+        // Omit password
+        const sanitizedUser = sanitizeUser(user);
+
+        // Add training plan details
+        sanitizedUser.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+
+        return sanitizedUser;
       }
       throw new Error('No user found');
     });

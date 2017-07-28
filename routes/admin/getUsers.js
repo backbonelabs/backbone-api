@@ -1,6 +1,7 @@
 import Debug from 'debug';
 import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:admin:getUsers');
 
@@ -31,7 +32,13 @@ export default (req) => {
     .find(searchQuery)
     .toArray()
     .then(users => (
-      // Remove password from all users
-      users.map(sanitizeUser)
+      users
+        // Remove password from all users
+        .map(sanitizeUser)
+        // Add training plan details
+        .map(user => ({
+          ...user,
+          trainingPlans: mapIdsToTrainingPlans(user.trainingPlans),
+        }))
     ));
 };
