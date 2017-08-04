@@ -7,6 +7,7 @@ import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
 import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 import EmailUtility from '../../lib/EmailUtility';
+import constants from '../../lib/constants';
 
 const debug = Debug('routes:users:updateUsers');
 
@@ -74,6 +75,11 @@ export default (req) => {
         if (pw !== verifyPassword) {
           throw new Error('Passwords must match');
         }
+
+        if (user.authMethod !== constants.authMethods.EMAIL) {
+          throw new Error('Password change is not allowed');
+        }
+
         return password.verify(currentPassword, user.password)
           .then((isPasswordMatch) => {
             // If password doesn't match
@@ -94,6 +100,7 @@ export default (req) => {
     })
     .then(([user, body]) => {
       const { email } = body;
+
 
       // Check if email is already taken
       if (email && email !== user.email) {

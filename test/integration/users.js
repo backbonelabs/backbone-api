@@ -13,6 +13,8 @@ import tokenFactory from '../../lib/tokenFactory';
 let emailUtility;
 let app;
 let db;
+let fbUserFixture1 = {};
+let fbUserFixture2 = {};
 let userFixture1 = {};
 let userFixture2 = {};
 let homeAndWorkTrainingPlans = [];
@@ -20,12 +22,21 @@ let homeAndWorkTrainingPlans = [];
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
+const testEmail3 = `test.${randomString()}@${randomString()}.com`;
+const testEmail4 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken1 = randomString({ length: 64 });
 const testAccessToken2 = randomString({ length: 64 });
+const testAccessToken3 = randomString({ length: 64 });
+const testAccessToken4 = randomString({ length: 64 });
 const userIdsToDelete = [];
-const accessTokensToDelete = [testAccessToken1, testAccessToken2];
+const accessTokensToDelete = [
+  testAccessToken1,
+  testAccessToken2,
+  testAccessToken3,
+  testAccessToken4,
+];
 
 before(() => (
   Promise.resolve(server)
@@ -55,6 +66,14 @@ before(() => (
           email: testEmail2,
           password: testPasswordHash,
         }),
+        mergeWithDefaultData({
+          email: testEmail3,
+          authMethod: constants.authMethods.FACEBOOK,
+        }),
+        mergeWithDefaultData({
+          email: null,
+          authMethod: constants.authMethods.FACEBOOK,
+        }),
       ])
     ))
     .then((results) => {
@@ -64,6 +83,12 @@ before(() => (
       userFixture1._id = userFixture1._id.toHexString();
       userFixture2._id = userFixture2._id.toHexString();
       userIdsToDelete.push(userFixture1._id, userFixture2._id);
+      fbUserFixture1 = ops[2];
+      fbUserFixture1._id = fbUserFixture1._id.toHexString();
+      fbUserFixture2 = ops[3];
+      fbUserFixture2._id = fbUserFixture2._id.toHexString();
+      userIdsToDelete.push(fbUserFixture1._id);
+      userIdsToDelete.push(fbUserFixture2._id);
     })
     .then(() => (
       db.collection('accessTokens')
@@ -73,6 +98,12 @@ before(() => (
         }, {
           userId: mongodb.ObjectID(userFixture2._id),
           accessToken: testAccessToken2,
+        }, {
+          userId: mongodb.ObjectID(fbUserFixture1._id),
+          accessToken: testAccessToken3,
+        }, {
+          userId: mongodb.ObjectID(fbUserFixture2._id),
+          accessToken: testAccessToken4,
         }])
     ))
 ));
@@ -195,6 +226,7 @@ describe('/users router', () => {
             'confirmationTokenExpiry',
             'dailyStreak',
             'lastSession',
+            'authMethod',
             'trainingPlans',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
@@ -479,6 +511,34 @@ describe('/users router', () => {
         .then((isPasswordMatches) => {
           expect(isPasswordMatches).to.be.true;
         });
+    });
+
+    it('should not update password on non email/password accounts', (done) => {
+      const newPassword = 'abcd1234';
+      request(app)
+        .post(`/users/${fbUserFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken3}`)
+        .send({
+          currentPassword: testPassword,
+          password: newPassword,
+          verifyPassword: newPassword,
+        })
+        .expect(400)
+        .end(done);
+    });
+
+    it('should update email on Facebook account with no email', (done) => {
+      request(app)
+        .post(`/users/${fbUserFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken4}`)
+        .send({
+          email: testEmail4,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.email).to.be.testEmail4;
+        })
+        .end(done);
     });
   });
 

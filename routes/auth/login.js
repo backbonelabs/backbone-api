@@ -5,10 +5,11 @@ import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 import passwordUtil from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
+import constants from '../../lib/constants';
 import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:login');
-const errorMessage = 'Invalid login credentials. Please try again.';
+const errorMessage = 'Incorrect email or password';
 
 /**
  * Verifies a user account by checking the email and password and returns the
@@ -33,12 +34,15 @@ export default (req, res) => validate(req.body, {
     // Look up user by email
     return dbManager.getDb()
       .collection('users')
-      .find({ email: new RegExp(`^${req.body.email}$`, 'i') })
+      .find({ email: new RegExp(`^${email}$`, 'i') })
       .limit(1)
       .next()
       .then((user) => {
         if (user) {
           debug('Found user by email', email);
+          if (user.authMethod === constants.authMethods.FACEBOOK) {
+            throw new Error('Please log in with Facebook');
+          }
           return user;
         }
         debug('Did not find user by email', email);
