@@ -17,7 +17,7 @@ let fbUserFixture1 = {};
 let fbUserFixture2 = {};
 let userFixture1 = {};
 let userFixture2 = {};
-let homeAndWorkTrainingPlans = [];
+let defaultTrainingPlans = [];
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
@@ -47,14 +47,16 @@ before(() => (
     .then((mDb) => {
       db = mDb;
     })
-    .then(() => (
-      db.collection('trainingPlans')
-        .find({ name: { $in: ['Home', 'Work'] } })
+    .then(() => {
+      const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
+
+      return db.collection('trainingPlans')
+        .find({ name: { $in: defaultTrainingPlanNames } })
         .toArray()
         .then((trainingPlans) => {
-          homeAndWorkTrainingPlans = trainingPlans;
-        })
-    ))
+          defaultTrainingPlans = trainingPlans;
+        });
+    })
     .then(() => (
       db.collection('users')
       .insertMany([
@@ -241,11 +243,9 @@ describe('/users router', () => {
             'slouchNotification',
           );
 
-          const homeAndWorkTrainingPlanIds =
-            homeAndWorkTrainingPlans.map(plan => plan._id.toHexString());
-
+          const defaultTrainingPlanIds = defaultTrainingPlans.map(plan => plan._id.toHexString());
           res.body.user.trainingPlans.forEach((plan) => {
-            expect(plan._id).to.be.oneOf(homeAndWorkTrainingPlanIds);
+            expect(plan._id).to.be.oneOf(defaultTrainingPlanIds);
           });
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
