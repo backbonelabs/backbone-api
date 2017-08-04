@@ -72,6 +72,7 @@ export default (req, res) => validate(req.body, {
       .then((result) => {
         // Throw an error if Facebook returns any errors.
         if (result.data.error) {
+          debug('Failed to verify Facebook user access token', result.data.error);
           // Facebook error code for invalid user access token:
           // { code: 190, message: 'Invalid OAuth access token.' }
           if (result.data.error.code === 190) {
