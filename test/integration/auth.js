@@ -136,6 +136,8 @@ before(() => Promise.resolve(server)
     return requestPromise(options);
   })
   .then((body) => {
+    // Three test users must exist at developer.facebook.com for this test
+    // work. The user passwords and email must not be changed.
     // testUser1 is for adding facebook to existing email/password accounts
     // testUser2 is for new accounts from facebook logins
     // testUser3 is for facebook accounts without an email address
