@@ -8,6 +8,7 @@ import server from '../../index';
 import userDefaults from '../../lib/userDefaults';
 import constants from '../../lib/constants';
 import EmailUtility from '../../lib/EmailUtility';
+import tokenFactory from '../../lib/tokenFactory';
 
 let emailUtility;
 let app;
@@ -16,6 +17,7 @@ let fbUserFixture1 = {};
 let fbUserFixture2 = {};
 let userFixture1 = {};
 let userFixture2 = {};
+let homeAndWorkTrainingPlans = [];
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
@@ -45,6 +47,14 @@ before(() => (
     .then((mDb) => {
       db = mDb;
     })
+    .then(() => (
+      db.collection('trainingPlans')
+        .find({ name: { $in: ['Home', 'Work'] } })
+        .toArray()
+        .then((trainingPlans) => {
+          homeAndWorkTrainingPlans = trainingPlans;
+        })
+    ))
     .then(() => (
       db.collection('users')
       .insertMany([
@@ -217,6 +227,7 @@ describe('/users router', () => {
             'dailyStreak',
             'lastSession',
             'authMethod',
+            'trainingPlans',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -229,6 +240,13 @@ describe('/users router', () => {
             'slouchTimeThreshold',
             'slouchNotification',
           );
+
+          const homeAndWorkTrainingPlanIds =
+            homeAndWorkTrainingPlans.map(plan => plan._id.toHexString());
+
+          res.body.user.trainingPlans.forEach((plan) => {
+            expect(plan._id).to.be.oneOf(homeAndWorkTrainingPlanIds);
+          });
           expect(res.body).to.not.have.property('password');
           expect(res.body.accessToken).to.be.a('string');
           expect(sendConfirmationEmailStub.callCount).to.equal(1);
@@ -284,6 +302,18 @@ describe('/users router', () => {
 
   describe('POST /:id', () => {
     let url;
+    let sendConfirmationEmailStub;
+    let generateTokenStub;
+
+    beforeEach(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendConfirmationEmailStub = sinon
+        .stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
+    });
 
     const assertRequest = body => request(app)
       .post(url)
@@ -292,6 +322,8 @@ describe('/users router', () => {
 
     before(() => {
       url = `/users/${userFixture1._id}`;
+      generateTokenStub = sinon
+        .spy(tokenFactory, 'generateToken');
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
@@ -335,7 +367,20 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should update non-password fields', (done) => {
+    it('should not allow an email update if the email is taken by another user', (done) => {
+      const newEmail = userFixture1.email;
+      request(app)
+        .post(`/users/${userFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken2}`)
+        .send({ email: newEmail })
+        .expect(400)
+        .expect(() => {
+          expect(sendConfirmationEmailStub.callCount).to.equal(0);
+        })
+        .end(done);
+    });
+
+    it('should update email address', (done) => {
       const newEmail = `aaa${userFixture1.email}`;
       assertRequest({ email: newEmail })
         .expect(200)
@@ -344,18 +389,95 @@ describe('/users router', () => {
           expect(body._id).to.equal(userFixture1._id);
           expect(body.email).to.equal(newEmail);
           expect(body.password).to.not.exist;
+          expect(sendConfirmationEmailStub.callCount).to.equal(1);
+          expect(generateTokenStub.callCount).to.equal(1);
           userFixture1.email = newEmail;
         })
         .end(done);
     });
 
-    it('should not allow an email update if the email is taken by another user', (done) => {
-      const newEmail = userFixture1.email;
-      request(app)
-        .post(`/users/${userFixture2._id}`)
-        .set('Authorization', `Bearer ${testAccessToken2}`)
-        .send({ email: newEmail })
-        .expect(400)
+    it('should update first name', (done) => {
+      const testFirstName = randomString();
+      assertRequest({ firstName: testFirstName })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.firstName).to.equal(testFirstName);
+        })
+        .end(done);
+    });
+
+    it('should update last name', (done) => {
+      const testLastName = randomString();
+      assertRequest({ lastName: testLastName })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.lastName).to.equal(testLastName);
+        })
+        .end(done);
+    });
+
+    it('should update nickname', (done) => {
+      const testNickname = randomString();
+      assertRequest({ nickname: testNickname })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.nickname).to.equal(testNickname);
+        })
+        .end(done);
+    });
+
+    it('should update gender', (done) => {
+      const testGender = 1;
+      assertRequest({ gender: testGender })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.gender).to.equal(testGender);
+        })
+        .end(done);
+    });
+
+    it('should update height', (done) => {
+      const testHeight = 100;
+      assertRequest({ height: testHeight })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.height).to.equal(testHeight);
+        })
+        .end(done);
+    });
+
+    it('should update weight', (done) => {
+      const testWeight = 100;
+      assertRequest({ weight: testWeight })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.weight).to.equal(testWeight);
+        })
+        .end(done);
+    });
+
+    it('should update birthdate', (done) => {
+      const testBirthdate = (new Date()).toISOString();
+      assertRequest({ birthdate: testBirthdate })
+        .expect(200)
+        .expect((res) => {
+          // console.log(res);
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.birthdate).to.equal(testBirthdate);
+        })
         .end(done);
     });
 

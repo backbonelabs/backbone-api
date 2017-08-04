@@ -3,3 +3,4 @@
 --timeout 5000
 ./test/unit
 ./test/integration
+./test/integration/lib

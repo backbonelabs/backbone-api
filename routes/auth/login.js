@@ -2,10 +2,11 @@ import Debug from 'debug';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
-import passwordUtil from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
+import passwordUtil from '../../lib/password';
 import tokenFactory from '../../lib/tokenFactory';
 import constants from '../../lib/constants';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:login');
 const errorMessage = 'Incorrect email or password';
@@ -74,9 +75,10 @@ export default (req, res) => validate(req.body, {
       });
   })
   .then(([user, accessToken]) => {
-    // Return sanitized user object with access token
+    // Return sanitized user object with access token and training plan details
     const userResult = sanitizeUser(user);
     userResult.accessToken = accessToken;
+    userResult.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
     return userResult;
   })
   .catch((err) => {

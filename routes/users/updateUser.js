@@ -5,6 +5,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
+import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
 import EmailUtility from '../../lib/EmailUtility';
 import constants from '../../lib/constants';
 
@@ -141,7 +142,12 @@ export default (req) => {
         throw new Error('Invalid user');
       }
 
-      // Return updated user
-      return sanitizeUser(user.value);
+      // Omit password
+      const sanitizedUser = sanitizeUser(user.value);
+
+      // Add training plans details
+      sanitizedUser.trainingPlans = mapIdsToTrainingPlans(sanitizedUser.trainingPlans);
+
+      return sanitizedUser;
     });
 };

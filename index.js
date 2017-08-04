@@ -3,6 +3,7 @@ import express from 'express';
 import bugsnag from 'bugsnag';
 import bodyParser from 'body-parser';
 import dbManager from './lib/dbManager';
+import { getTrainingPlans, getWorkouts } from './lib/trainingPlans';
 import adminRouter from './routes/admin';
 import authRouter from './routes/auth';
 import firmwareRouter from './routes/firmware';
@@ -49,7 +50,18 @@ export default dbManager.init({
     },
   },
 })
+  .then(getWorkouts) // Fetch and store workouts
+  .then(getTrainingPlans) // Fetch and store training plans
   .then(() => {
+    // Cheap version of an expiring cache for retrieving the
+    // latest training plan and workout data every 10 minutes
+    setInterval(() => {
+      getWorkouts(true)
+        .then(() => {
+          getTrainingPlans(true);
+        });
+    }, 1000 * 60 * 10);
+
     // Register route handlers
     app.use('/admin', adminRouter);
     app.use('/auth', authRouter);
