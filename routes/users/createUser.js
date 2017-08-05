@@ -58,9 +58,10 @@ export default req => validate(req.body, {
         [confirmationToken, confirmationTokenExpiry],
         plans,
       ]) => {
-        // Get home and work training plans to assign to user
-        const homeAndWorkTrainingPlans = plans
-          .filter(plan => plan.name === 'Home' || plan.name === 'Work')
+        // Get default training plan(s) to assign to user
+        const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
+        const defaultTrainingPlanIds = plans
+          .filter(plan => defaultTrainingPlanNames.includes(plan.name))
           .map(plan => plan._id);
 
         return dbManager.getDb()
@@ -71,7 +72,7 @@ export default req => validate(req.body, {
             createdAt: new Date(),
             confirmationToken,
             confirmationTokenExpiry,
-            trainingPlans: homeAndWorkTrainingPlans,
+            trainingPlans: defaultTrainingPlanIds,
           }))
           .then((result) => {
             // Initiate sending of user confirmation email
