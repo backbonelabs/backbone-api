@@ -482,13 +482,14 @@ describe('/users router', () => {
     });
 
     it('should update favorite workouts', (done) => {
-      const workoutId = randomString({ length: 24 });
-      assertRequest({ favoriteWorkouts: [workoutId] })
+      const favoriteWorkouts = [];
+      favoriteWorkouts.push(randomString({ length: 24 }));
+      assertRequest({ favoriteWorkouts })
         .expect(200)
         .expect((res) => {
           const { body } = res;
           expect(body._id).to.equal(userFixture1._id);
-          expect(body.favoriteWorkouts).to.deep.equal([workoutId]);
+          expect(body.favoriteWorkouts).to.deep.equal(favoriteWorkouts);
         })
         .end(done);
     });
