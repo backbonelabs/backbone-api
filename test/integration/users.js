@@ -230,6 +230,7 @@ describe('/users router', () => {
             'lastSession',
             'authMethod',
             'trainingPlans',
+            'favoriteWorkouts',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -473,10 +474,21 @@ describe('/users router', () => {
       assertRequest({ birthdate: testBirthdate })
         .expect(200)
         .expect((res) => {
-          // console.log(res);
           const { body } = res;
           expect(body._id).to.equal(userFixture1._id);
           expect(body.birthdate).to.equal(testBirthdate);
+        })
+        .end(done);
+    });
+
+    it('should update favorite workouts', (done) => {
+      const workoutId = randomString({ length: 24 });
+      assertRequest({ favoriteWorkouts: [workoutId] })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.favoriteWorkouts).to.deep.equal([workoutId]);
         })
         .end(done);
     });
