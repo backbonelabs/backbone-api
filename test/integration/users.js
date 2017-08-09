@@ -652,4 +652,45 @@ describe('/users router', () => {
         .end(done);
     });
   });
+
+  describe('GET /workouts/:id', () => {
+    const url = '/users/workouts';
+
+    it('should respond with 401 on missing authorization credentials', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with 401 on invalid access token', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', 'Bearer 123')
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with a 401 if access token does not belong to the user id', (done) => {
+      request(app)
+        .get(`${url}/abcdef123456abcdef123456`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(401)
+        .expect({ error: 'Invalid credentials' })
+        .end(done);
+    });
+
+    it('should return an array', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.be.instanceOf(Array);
+        })
+        .end(done);
+    });
+  });
 });
