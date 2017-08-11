@@ -98,12 +98,12 @@ export default (req) => {
 
       // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
       if (body.favoriteWorkouts) {
-        // Remove duplicate workout Ids
-        body.favoriteWorkouts = body.favoriteWorkouts.filter(
-          (workout, index, favoriteWorkouts) => index === favoriteWorkouts.indexOf(workout)
-        );
-
         return getWorkouts().then((workoutsFromCache) => {
+          // Remove duplicate workout Ids
+          body.favoriteWorkouts = body.favoriteWorkouts.filter(
+            (workout, index, favoriteWorkouts) => index === favoriteWorkouts.indexOf(workout)
+          );
+
           const isFavoriteWorkoutsValid = body.favoriteWorkouts.every((favoriteWorkoutId) => {
             const matchingWorkouts = workoutsFromCache.filter(workoutObj =>
                workoutObj._id.toHexString() === favoriteWorkoutId);
@@ -113,6 +113,7 @@ export default (req) => {
           if (!isFavoriteWorkoutsValid) {
             throw new Error('Invalid workout');
           }
+          // Converts workout Id strings to Mongo objects
           body.favoriteWorkouts = body.favoriteWorkouts.map(workout =>
               dbManager.mongodb.ObjectId(workout)
             );
