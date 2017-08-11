@@ -511,7 +511,10 @@ describe('/users router', () => {
         .expect((res) => {
           const { body } = res;
           expect(body._id).to.equal(userFixture1._id);
-          expect(body.favoriteWorkouts).to.deep.equal([workouts[0]._id.toHexString(), workouts[1]._id.toHexString()]);
+          expect(body.favoriteWorkouts).to.deep.equal([
+            workouts[0]._id.toHexString(),
+            workouts[1]._id.toHexString(),
+          ]);
         })
         .end(done);
       });
