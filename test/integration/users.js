@@ -504,6 +504,19 @@ describe('/users router', () => {
         .end(done);
     });
 
+    it.only('should remove duplicate favorite workout Id', (done) => {
+      getWorkouts().then((workouts) => {
+        assertRequest({ favoriteWorkouts: [workouts[0]._id, workouts[1]._id, workouts[0]._id] })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.favoriteWorkouts).to.deep.equal([workouts[0]._id.toHexString(), workouts[1]._id.toHexString()]);
+        })
+        .end(done);
+      });
+    });
+
     it('should update password', () => {
       const newPassword = 'abcd1234';
       return new Promise((resolve, reject) => {

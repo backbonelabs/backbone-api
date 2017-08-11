@@ -98,6 +98,11 @@ export default (req) => {
 
       // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
       if (body.favoriteWorkouts) {
+        // Remove duplicate workout Ids
+        body.favoriteWorkouts = body.favoriteWorkouts.filter(
+          (workout, index, favoriteWorkouts) => index === favoriteWorkouts.indexOf(workout)
+        );
+
         return getWorkouts().then((workoutsFromCache) => {
           const isFavoriteWorkoutsValid = body.favoriteWorkouts.every((favoriteWorkoutId) => {
             const matchingWorkouts = workoutsFromCache.filter(workoutObj =>
