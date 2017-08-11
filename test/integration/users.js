@@ -504,7 +504,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it.only('should remove duplicate favorite workout Id', (done) => {
+    it('should remove duplicate favorite workout Id', (done) => {
       getWorkouts().then((workouts) => {
         assertRequest({ favoriteWorkouts: [workouts[0]._id, workouts[1]._id, workouts[0]._id] })
         .expect(200)
