@@ -1,4 +1,5 @@
 import Debug from 'debug';
+import { uniq } from 'lodash';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -100,15 +101,17 @@ export default (req) => {
       if (body.favoriteWorkouts) {
         return getWorkouts().then((workoutsFromCache) => {
           // Remove duplicate workout Ids
-          body.favoriteWorkouts = body.favoriteWorkouts.filter(
-            (workout, index, favoriteWorkouts) => index === favoriteWorkouts.indexOf(workout)
-          );
+          body.favoriteWorkouts = uniq(body.favoriteWorkouts);
 
-          const isFavoriteWorkoutsValid = body.favoriteWorkouts.every((favoriteWorkoutId) => {
-            const matchingWorkouts = workoutsFromCache.filter(workoutObj =>
-               workoutObj._id.toHexString() === favoriteWorkoutId);
-            return matchingWorkouts.length > 0;
+          // Put all workouts into a hash table
+          const workoutsHashTable = {};
+          workoutsFromCache.forEach((workout) => {
+            workoutsHashTable[workout._id] = workout;
           });
+
+          const isFavoriteWorkoutsValid = body.favoriteWorkouts.every(
+            favoriteWorkoutId => workoutsHashTable[favoriteWorkoutId]
+          );
 
           if (!isFavoriteWorkoutsValid) {
             throw new Error('Invalid workout');
