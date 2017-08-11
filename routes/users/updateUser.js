@@ -5,7 +5,7 @@ import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
-import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
+import { mapIdsToTrainingPlans, getWorkouts } from '../../lib/trainingPlans';
 import EmailUtility from '../../lib/EmailUtility';
 import constants from '../../lib/constants';
 
@@ -94,6 +94,25 @@ export default (req) => {
                 return [user, body];
               });
           });
+      }
+
+      // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
+      if (body.favoriteWorkouts) {
+        return getWorkouts().then((workoutsFromCache) => {
+          const isFavoriteWorkoutsValid = body.favoriteWorkouts.every((favoriteWorkoutId) => {
+            const matchingWorkouts = workoutsFromCache.filter(workoutObj =>
+               workoutObj._id.toHexString() === favoriteWorkoutId);
+            return matchingWorkouts.length > 0;
+          });
+
+          if (!isFavoriteWorkoutsValid) {
+            throw new Error('Invalid workout');
+          }
+          body.favoriteWorkouts = body.favoriteWorkouts.map(workout =>
+              dbManager.mongodb.ObjectId(workout)
+            );
+          return [user, body];
+        });
       }
 
       return [user, body];
