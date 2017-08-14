@@ -1,11 +1,12 @@
 import Debug from 'debug';
+import uniq from 'lodash/uniq';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import password from '../../lib/password';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
-import { mapIdsToTrainingPlans } from '../../lib/trainingPlans';
+import { mapIdsToTrainingPlans, getWorkouts } from '../../lib/trainingPlans';
 import EmailUtility from '../../lib/EmailUtility';
 import constants from '../../lib/constants';
 
@@ -94,6 +95,33 @@ export default (req) => {
                 return [user, body];
               });
           });
+      }
+
+      // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
+      if (body.favoriteWorkouts) {
+        return getWorkouts().then((workoutsFromCache) => {
+          // Remove duplicate workout Ids
+          body.favoriteWorkouts = uniq(body.favoriteWorkouts);
+
+          // Put all workouts into a hash table
+          const workoutsHashTable = {};
+          workoutsFromCache.forEach((workout) => {
+            workoutsHashTable[workout._id] = workout;
+          });
+
+          const isFavoriteWorkoutsValid = body.favoriteWorkouts.every(
+            favoriteWorkoutId => workoutsHashTable[favoriteWorkoutId]
+          );
+
+          if (!isFavoriteWorkoutsValid) {
+            throw new Error('Invalid workout');
+          }
+          // Converts workout Id strings to Mongo objects
+          body.favoriteWorkouts = body.favoriteWorkouts.map(workout =>
+              dbManager.mongodb.ObjectId(workout)
+            );
+          return [user, body];
+        });
       }
 
       return [user, body];

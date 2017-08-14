@@ -9,6 +9,7 @@ import userDefaults from '../../lib/userDefaults';
 import constants from '../../lib/constants';
 import EmailUtility from '../../lib/EmailUtility';
 import tokenFactory from '../../lib/tokenFactory';
+import { getWorkouts } from '../../lib/trainingPlans';
 
 let emailUtility;
 let app;
@@ -230,6 +231,7 @@ describe('/users router', () => {
             'lastSession',
             'authMethod',
             'trainingPlans',
+            'favoriteWorkouts',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -473,12 +475,49 @@ describe('/users router', () => {
       assertRequest({ birthdate: testBirthdate })
         .expect(200)
         .expect((res) => {
-          // console.log(res);
           const { body } = res;
           expect(body._id).to.equal(userFixture1._id);
           expect(body.birthdate).to.equal(testBirthdate);
         })
         .end(done);
+    });
+
+    it('should update valid favorite workout Id', (done) => {
+      getWorkouts().then((workouts) => {
+        assertRequest({ favoriteWorkouts: [workouts[0]._id] })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.favoriteWorkouts).to.deep.equal([workouts[0]._id.toHexString()]);
+        })
+        .end(done);
+      });
+    });
+
+    it('should reject invalid favorite workout Ids', (done) => {
+      assertRequest({ favoriteWorkouts: [randomString({ length: 24 })] })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).to.equal('Invalid workout');
+        })
+        .end(done);
+    });
+
+    it('should remove duplicate favorite workout Id', (done) => {
+      getWorkouts().then((workouts) => {
+        assertRequest({ favoriteWorkouts: [workouts[0]._id, workouts[1]._id, workouts[0]._id] })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.favoriteWorkouts).to.deep.equal([
+            workouts[0]._id.toHexString(),
+            workouts[1]._id.toHexString(),
+          ]);
+        })
+        .end(done);
+      });
     });
 
     it('should update password', () => {
