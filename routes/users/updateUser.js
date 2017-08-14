@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import { uniq } from 'lodash';
+import uniq from 'lodash/uniq';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
