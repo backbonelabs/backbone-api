@@ -18,6 +18,7 @@ Ask another developer for the following environment variables values, which you'
 
 * BL_ACCESS_TOKEN_SECRET
 * BL_MAILGUN_API
+* FB_APP_SECRET
 
 ### Email settings
 
