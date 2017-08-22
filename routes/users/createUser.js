@@ -88,7 +88,7 @@ export default req => validate(req.body, {
   .then(([result, accessToken]) => {
     const { ops, insertedId: userId } = result;
     const user = sanitizeUser(ops[0]);
-    user.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+    user.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans, user.trainingPlanProgress);
 
     // Store accessToken along with userId
     return dbManager.getDb()
