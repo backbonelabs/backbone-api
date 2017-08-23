@@ -243,6 +243,8 @@ describe('/users router', () => {
             'vibrationPattern',
             'slouchTimeThreshold',
             'slouchNotification',
+            'dailyReminderNotification',
+            'dailyReminderTime',
           );
 
           const defaultTrainingPlanIds = defaultTrainingPlans.map(plan => plan._id.toHexString());
