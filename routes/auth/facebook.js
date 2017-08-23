@@ -8,6 +8,11 @@ import dbManager from '../../lib/dbManager';
 import sanitizeUser from '../../lib/sanitizeUser';
 import tokenFactory from '../../lib/tokenFactory';
 import constants from '../../lib/constants';
+import {
+  getTrainingPlans,
+  mapIdsToTrainingPlans,
+  getDefaultTrainingPlanIds,
+} from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:facebook');
 const errorMessages = {
@@ -115,13 +120,13 @@ export default (req, res) => validate(req.body, {
     }
 
     // Check if there is already a user with existing email or facebookUserID
-    return dbManager.getDb()
+    return Promise.all([dbManager.getDb()
       .collection('users')
       .findOne({ $or: [
         { email: new RegExp(`^${email}$`, 'i') },
         { facebookId },
-      ] })
-      .then((user) => {
+      ] }), getTrainingPlans()])
+      .then(([user, plans]) => {
         if (!user) {
           // Create new local user for facebook user
           return dbManager.getDb()
@@ -136,6 +141,7 @@ export default (req, res) => validate(req.body, {
               isConfirmed: true,
               authMethod: constants.authMethods.FACEBOOK,
               createdAt: new Date(),
+              trainingPlans: getDefaultTrainingPlanIds(plans),
             }))
             .then(newDoc => Object.assign({}, newDoc.ops[0], { isNew: true }));
         } else if (user.authMethod === constants.authMethods.EMAIL) {
@@ -174,9 +180,9 @@ export default (req, res) => validate(req.body, {
         return user;
       });
   })
-  .then((user) => {
+  .then((result) => {
     // Generate an access token
-    const { _id: userId } = user;
+    const { _id: userId } = result;
 
     return tokenFactory.createAccessToken(userId)
       .then((accessToken) => {
@@ -185,14 +191,15 @@ export default (req, res) => validate(req.body, {
         return dbManager.getDb()
           .collection('accessTokens')
           .insertOne({ userId, accessToken })
-          .then(() => [user, accessToken]);
+          .then(() => [result, accessToken]);
       });
   })
-  .then(([user, accessToken]) => {
+  .then(([result, accessToken]) => {
     // Return sanitized user object with access token
-    const userResult = sanitizeUser(user);
-    userResult.accessToken = accessToken;
-    return userResult;
+    const user = sanitizeUser(result);
+    user.accessToken = accessToken;
+    user.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+    return user;
   })
   .catch((err) => {
     Object.keys(errorMessages).forEach((key) => {
