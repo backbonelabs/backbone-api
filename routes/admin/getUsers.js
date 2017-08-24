@@ -38,7 +38,7 @@ export default (req) => {
         // Add training plan details
         .map(user => ({
           ...user,
-          trainingPlans: mapIdsToTrainingPlans(user.trainingPlans),
+          trainingPlans: mapIdsToTrainingPlans(user.trainingPlans, user.trainingPlanProgress),
         }))
     ));
 };

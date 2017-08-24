@@ -21,8 +21,9 @@ export default (req) => {
         // Omit password
         const sanitizedUser = sanitizeUser(user);
 
-        // Add training plan details
-        sanitizedUser.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+        // Add training plans details
+        sanitizedUser.trainingPlans =
+          mapIdsToTrainingPlans(sanitizedUser.trainingPlans, sanitizedUser.trainingPlanProgress);
 
         return sanitizedUser;
       }

@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import randomString from 'random-string';
+import cloneDeep from 'lodash/cloneDeep';
 import dbManager from '../../../lib/dbManager';
 import {
   fillTrainingPlanWorkouts,
@@ -7,6 +8,7 @@ import {
   getWorkouts,
   mapIdsToWorkouts,
   mapIdsToTrainingPlans,
+  fillTrainingPlanWithProgress,
 } from '../../../lib/trainingPlans';
 
 let db;
@@ -147,7 +149,7 @@ after(() => (
     ))
 ));
 
-describe('trainingPlans module', () => {
+describe('trainingPlans module integration tests', () => {
   describe('getTrainingPlans', () => {
     it('should be a function', () => {
       expect(getTrainingPlans).to.be.a('function');
@@ -213,6 +215,44 @@ describe('trainingPlans module', () => {
 
       const allWorkouts = mapIdsToWorkouts(testWorkouts.map(workout => workout._id));
       expect(allWorkouts).to.deep.equal(testWorkouts);
+    });
+  });
+
+  describe('fillTrainingPlanWithProgress', () => {
+    it('should be a function', () => {
+      expect(fillTrainingPlanWithProgress).to.be.a('function');
+    });
+
+    it('should set isComplete to false for all session workouts if no progress is passed', () => {
+      const updatedPlan = fillTrainingPlanWithProgress(cloneDeep(testTrainingPlans[0]));
+      updatedPlan.levels.forEach((level) => {
+        level.forEach((session) => {
+          session.forEach((workout) => {
+            expect(workout.isComplete).to.be.false;
+          });
+        });
+      });
+    });
+
+    it('should set isComplete to true based on progress', () => {
+      const updatedPlan = fillTrainingPlanWithProgress(cloneDeep(testTrainingPlans[0]), {
+        [testTrainingPlans[0]._id]: [
+          [
+            [true, false, true],
+            [undefined, true],
+            [true],
+          ],
+        ],
+      });
+      expect(updatedPlan.levels[0][0][0]).to.have.property('isComplete', true);
+      expect(updatedPlan.levels[0][0][1]).to.have.property('isComplete', false);
+      expect(updatedPlan.levels[0][0][2]).to.have.property('isComplete', true);
+      expect(updatedPlan.levels[0][1][0]).to.have.property('isComplete', false);
+      expect(updatedPlan.levels[0][1][1]).to.have.property('isComplete', true);
+      expect(updatedPlan.levels[0][2][0]).to.have.property('isComplete', true);
+      expect(updatedPlan.levels[1][0][0]).to.have.property('isComplete', false);
+      expect(updatedPlan.levels[1][1][0]).to.have.property('isComplete', false);
+      expect(updatedPlan.levels[1][2][0]).to.have.property('isComplete', false);
     });
   });
 

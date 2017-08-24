@@ -78,7 +78,8 @@ export default (req, res) => validate(req.body, {
     // Return sanitized user object with access token and training plan details
     const userResult = sanitizeUser(user);
     userResult.accessToken = accessToken;
-    userResult.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+    userResult.trainingPlans =
+      mapIdsToTrainingPlans(userResult.trainingPlans, userResult.trainingPlanProgress);
     return userResult;
   })
   .catch((err) => {
