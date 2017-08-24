@@ -9,6 +9,7 @@ import sanitizeUser from '../../lib/sanitizeUser';
 import {
   getTrainingPlans,
   mapIdsToTrainingPlans,
+  getDefaultTrainingPlanIds,
 } from '../../lib/trainingPlans';
 
 /**
@@ -57,14 +58,8 @@ export default req => validate(req.body, {
       .then(([
         [confirmationToken, confirmationTokenExpiry],
         plans,
-      ]) => {
-        // Get default training plan(s) to assign to user
-        const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
-        const defaultTrainingPlanIds = plans
-          .filter(plan => defaultTrainingPlanNames.includes(plan.name))
-          .map(plan => plan._id);
-
-        return dbManager.getDb()
+      ]) =>
+         dbManager.getDb()
           .collection('users')
           .insertOne(userDefaults.mergeWithDefaultData({
             email: req.body.email,
@@ -72,7 +67,7 @@ export default req => validate(req.body, {
             createdAt: new Date(),
             confirmationToken,
             confirmationTokenExpiry,
-            trainingPlans: defaultTrainingPlanIds,
+            trainingPlans: getDefaultTrainingPlanIds(plans),
           }))
           .then((result) => {
             // Initiate sending of user confirmation email
@@ -82,8 +77,7 @@ export default req => validate(req.body, {
               .then(() => tokenFactory.createAccessToken())
               // Return result from inserting user and accessToken
               .then(accessToken => [result, accessToken]);
-          });
-      })
+          }))
   ))
   .then(([result, accessToken]) => {
     const { ops, insertedId: userId } = result;
