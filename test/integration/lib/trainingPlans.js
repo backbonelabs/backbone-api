@@ -293,20 +293,30 @@ describe('trainingPlans module integration tests', () => {
     it('should be a function', () => {
       expect(getDefaultTrainingPlanIds).to.be.a('function');
     });
-    it('should return an array of training plan ObjectIDs', () => {
-      getTrainingPlans(true)
-      .then((plans) => {
-        const defaultTrainingPlanIds = getDefaultTrainingPlanIds(plans);
-        expect(defaultTrainingPlanIds).to.be.an('array');
 
-        // Assert training plan Ids
-        const plansHash = {};
-        plans.forEach((plan) => {
-          plansHash[plan._id] = plan;
+    it('should return an array of a single training plan ObjectID', () => {
+      process.env.BL_DEFAULT_TRAINING_PLAN_NAMES = `${testPlanName1}`;
+      return getTrainingPlans()
+        .then((plans) => {
+          const defaultTrainingPlanIds = getDefaultTrainingPlanIds(plans);
+          expect(defaultTrainingPlanIds).to.be.an('array');
+          expect(defaultTrainingPlanIds).to.have.lengthOf(1);
+          expect(mapIdsToTrainingPlans(defaultTrainingPlanIds)[0].name).to.equal(testPlanName1);
         });
-        const allValid = defaultTrainingPlanIds.every(planId => plansHash[planId]);
-        expect(allValid).to.be.true;
-      });
+    });
+
+    it('should return an array of a multiple training plan ObjectIDs', () => {
+      process.env.BL_DEFAULT_TRAINING_PLAN_NAMES = `${testPlanName1},${testPlanName2}`;
+      return getTrainingPlans()
+        .then((plans) => {
+          const defaultTrainingPlanIds = getDefaultTrainingPlanIds(plans);
+          expect(defaultTrainingPlanIds).to.be.an('array');
+          expect(defaultTrainingPlanIds).to.have.lengthOf(2);
+          const testPlanArray = [testPlanName1, testPlanName2];
+          mapIdsToTrainingPlans(defaultTrainingPlanIds).forEach((plan, idx) => {
+            expect(plan.name).to.equal(testPlanArray[idx]);
+          });
+        });
     });
   });
 });
