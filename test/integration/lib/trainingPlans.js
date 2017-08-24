@@ -7,6 +7,7 @@ import {
   getWorkouts,
   mapIdsToWorkouts,
   mapIdsToTrainingPlans,
+  getDefaultTrainingPlanIds,
 } from '../../../lib/trainingPlans';
 
 let db;
@@ -244,6 +245,27 @@ describe('trainingPlans module', () => {
             });
           });
         });
+      });
+    });
+  });
+
+  describe('getDefaultTrainingPlanIds', () => {
+    it('should be a function', () => {
+      expect(getDefaultTrainingPlanIds).to.be.a('function');
+    });
+    it('should return an array of training plan ObjectIDs', () => {
+      getTrainingPlans(true)
+      .then((plans) => {
+        const defaultTrainingPlanIds = getDefaultTrainingPlanIds(plans);
+        expect(defaultTrainingPlanIds).to.be.an('array');
+
+        // Assert training plan Ids
+        const plansHash = {};
+        plans.forEach((plan) => {
+          plansHash[plan._id] = plan;
+        });
+        const allValid = defaultTrainingPlanIds.every(planId => plansHash[planId]);
+        expect(allValid).to.be.true;
       });
     });
   });
