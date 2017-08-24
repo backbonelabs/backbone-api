@@ -232,6 +232,7 @@ describe('/users router', () => {
             'authMethod',
             'trainingPlans',
             'favoriteWorkouts',
+            'trainingPlanProgress',
           );
           expect(res.body.user).to.have.property('heightUnitPreference', constants.heightUnits.IN);
           expect(res.body.user).to.have.property('weightUnitPreference', constants.weightUnits.LB);
@@ -243,6 +244,8 @@ describe('/users router', () => {
             'vibrationPattern',
             'slouchTimeThreshold',
             'slouchNotification',
+            'dailyReminderNotification',
+            'dailyReminderTime',
           );
 
           const defaultTrainingPlanIds = defaultTrainingPlans.map(plan => plan._id.toHexString());
