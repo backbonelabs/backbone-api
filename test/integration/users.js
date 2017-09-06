@@ -582,6 +582,36 @@ describe('/users router', () => {
         })
         .end(done);
     });
+
+    it('should reject FacebookId on unconfirmed email accounts', (done) => {
+      const facebookId = 12345678;
+      assertRequest({ facebookId })
+      .expect(400)
+      .expect((res) => {
+        expect(sendConfirmationEmailStub.callCount).to.equal(1);
+        expect(res.body.error).to.equal('Please confirm your email before connecting with Facebook');
+      })
+      .end(done);
+    });
+
+    it('should accept FacebookId on confirmed email accounts', (done) => {
+      const facebookId = 12345678;
+      db.collection('users')
+      .findOneAndUpdate(
+        { _id: mongodb.ObjectID(userFixture1._id) },
+        { $set: { isConfirmed: true } },
+      )
+      .then(() => {
+        assertRequest({ facebookId })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture1._id);
+          expect(body.facebookId).to.equal(facebookId);
+        })
+        .end(done);
+      });
+    });
   });
 
   describe('POST /settings/:id', () => {
