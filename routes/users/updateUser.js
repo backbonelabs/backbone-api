@@ -124,6 +124,30 @@ export default (req) => {
         });
       }
 
+      // Checks if user's email is confirmed before adding facebookId
+      if (body.facebookId && !user.isConfirmed) {
+        // Resends confirmation email
+        tokenFactory.generateToken()
+        .then(([confirmationToken, confirmationTokenExpiry]) =>
+          Object.assign({}, { confirmationToken, confirmationTokenExpiry })
+        )
+        .then((tokenResults) => {
+          const emailUtility = EmailUtility.getMailer();
+          emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
+          return tokenResults;
+        })
+        .then((tokenResults) => {
+          dbManager.getDb()
+          .collection('users')
+          .findOneAndUpdate(
+            { _id: dbManager.mongodb.ObjectID(req.params.id) },
+            { $set: tokenResults },
+            { returnOriginal: false },
+          );
+        });
+        throw new Error('Please confirm your email before connecting with Facebook');
+      }
+
       return [user, body];
     })
     .then(([user, body]) => {
