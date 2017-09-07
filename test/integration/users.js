@@ -18,6 +18,7 @@ let fbUserFixture1 = {};
 let fbUserFixture2 = {};
 let userFixture1 = {};
 let userFixture2 = {};
+let userFixture3 = {};
 let defaultTrainingPlans = [];
 
 const { mergeWithDefaultData } = userDefaults;
@@ -25,18 +26,21 @@ const testEmail1 = `test.${randomString()}@${randomString()}.com`;
 const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testEmail4 = `test.${randomString()}@${randomString()}.com`;
+const testEmail5 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken1 = randomString({ length: 64 });
 const testAccessToken2 = randomString({ length: 64 });
 const testAccessToken3 = randomString({ length: 64 });
 const testAccessToken4 = randomString({ length: 64 });
+const testAccessToken5 = randomString({ length: 64 });
 const userIdsToDelete = [];
 const accessTokensToDelete = [
   testAccessToken1,
   testAccessToken2,
   testAccessToken3,
   testAccessToken4,
+  testAccessToken5,
 ];
 
 before(() => (
@@ -77,21 +81,32 @@ before(() => (
           email: null,
           authMethod: constants.authMethods.FACEBOOK,
         }),
+        mergeWithDefaultData({
+          email: testEmail5,
+          password: testPasswordHash,
+          isConfirmed: true,
+        }),
       ])
     ))
     .then((results) => {
       const { ops } = results;
       userFixture1 = ops[0];
       userFixture2 = ops[1];
+      userFixture3 = ops[4];
       userFixture1._id = userFixture1._id.toHexString();
       userFixture2._id = userFixture2._id.toHexString();
-      userIdsToDelete.push(userFixture1._id, userFixture2._id);
+      userFixture3._id = userFixture3._id.toHexString();
       fbUserFixture1 = ops[2];
       fbUserFixture1._id = fbUserFixture1._id.toHexString();
       fbUserFixture2 = ops[3];
       fbUserFixture2._id = fbUserFixture2._id.toHexString();
-      userIdsToDelete.push(fbUserFixture1._id);
-      userIdsToDelete.push(fbUserFixture2._id);
+      userIdsToDelete.push(
+        userFixture1._id,
+        userFixture2._id,
+        userFixture3._id,
+        fbUserFixture1._id,
+        fbUserFixture2._id,
+      );
     })
     .then(() => (
       db.collection('accessTokens')
@@ -101,6 +116,9 @@ before(() => (
         }, {
           userId: mongodb.ObjectID(userFixture2._id),
           accessToken: testAccessToken2,
+        }, {
+          userId: mongodb.ObjectID(userFixture3._id),
+          accessToken: testAccessToken5,
         }, {
           userId: mongodb.ObjectID(fbUserFixture1._id),
           accessToken: testAccessToken3,
@@ -589,28 +607,25 @@ describe('/users router', () => {
       .expect(400)
       .expect((res) => {
         expect(sendConfirmationEmailStub.callCount).to.equal(1);
-        expect(res.body.error).to.equal('Please confirm your email before connecting with Facebook');
+        expect(res.body.error).to.equal('An email was sent to your email address. ' +
+        'Please check your email to confirm your email address before connecting with Facebook.');
       })
       .end(done);
     });
 
     it('should accept FacebookId on confirmed email accounts', (done) => {
       const facebookId = 12345678;
-      db.collection('users')
-      .findOneAndUpdate(
-        { _id: mongodb.ObjectID(userFixture1._id) },
-        { $set: { isConfirmed: true } },
-      )
-      .then(() => {
-        assertRequest({ facebookId })
-        .expect(200)
-        .expect((res) => {
-          const { body } = res;
-          expect(body._id).to.equal(userFixture1._id);
-          expect(body.facebookId).to.equal(facebookId);
-        })
-        .end(done);
-      });
+      request(app)
+      .post(`/users/${userFixture3._id}`)
+      .set('Authorization', `Bearer ${testAccessToken5}`)
+      .send({ facebookId })
+      .expect(200)
+      .expect((res) => {
+        const { body } = res;
+        expect(body._id).to.equal(userFixture3._id);
+        expect(body.facebookId).to.equal(facebookId);
+      })
+      .end(done);
     });
   });
 
