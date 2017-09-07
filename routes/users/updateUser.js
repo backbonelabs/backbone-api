@@ -145,7 +145,8 @@ export default (req) => {
             { returnOriginal: false },
           );
         });
-        throw new Error('Please confirm your email before connecting with Facebook');
+        throw new Error('An email was sent to your email address. ' +
+        'Please check your email to confirm your email address before connecting with Facebook.');
       }
 
       return [user, body];
