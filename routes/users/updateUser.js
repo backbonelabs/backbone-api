@@ -21,6 +21,7 @@ const debug = Debug('routes:users:updateUsers');
  */
 export default (req) => {
   const reqBody = Object.assign({}, req.body);
+  const reqUserId = req.params.id;
 
   // If the session time sent from the user's phone is ahead of the servers's time then
   // set the last session time to the current server's time so it won't fail validation.
@@ -41,15 +42,15 @@ export default (req) => {
       // Make sure user exists
       dbManager.getDb()
         .collection('users')
-        .find({ _id: dbManager.mongodb.ObjectID(req.params.id) })
+        .find({ _id: dbManager.mongodb.ObjectID(reqUserId) })
         .limit(1)
         .next()
         .then((user) => {
           if (user) {
-            debug('Found user by id', req.params.id);
+            debug('Found user by id', reqUserId);
             return user;
           }
-          debug('Did not find user by id', req.params.id);
+          debug('Did not find user by id', reqUserId);
           throw new Error('Invalid user id');
         })
     ))
@@ -124,31 +125,50 @@ export default (req) => {
         });
       }
 
-      // Checks if user's email is confirmed before adding facebookId
-      if (body.facebookId && !user.isConfirmed) {
-        // Resends confirmation email
-        tokenFactory.generateToken()
-          .then(([confirmationToken, confirmationTokenExpiry]) => ({
-            confirmationToken,
-            confirmationTokenExpiry,
-          }))
-          .then((tokenResults) => {
-            const emailUtility = EmailUtility.getMailer();
-            emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
-            return tokenResults;
-          })
-          .then((tokenResults) => {
-            dbManager.getDb()
-              .collection('users')
-              .findOneAndUpdate(
-                { _id: dbManager.mongodb.ObjectID(req.params.id) },
-                { $set: tokenResults },
-                { returnOriginal: false },
-              );
-          });
+      if (body.facebookId && body.facebookId !== user.facebookId) {
+        // User is adding a Facebook account
+        if (!user.isConfirmed) {
+          // User is not confirmed yet, resend confirmation email
+          tokenFactory.generateToken()
+            .then(([confirmationToken, confirmationTokenExpiry]) => ({
+              confirmationToken,
+              confirmationTokenExpiry,
+            }))
+            .then((tokenResults) => {
+              const emailUtility = EmailUtility.getMailer();
+              emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
+              return tokenResults;
+            })
+            .then((tokenResults) => {
+              dbManager.getDb()
+                .collection('users')
+                .findOneAndUpdate(
+                  { _id: dbManager.mongodb.ObjectID(reqUserId) },
+                  { $set: tokenResults },
+                  { returnOriginal: false },
+                );
+            });
 
-        throw new Error('An email was sent to your email address. ' +
-          'Please check your email to confirm your email address before connecting with Facebook.');
+          debug('User attempted to add a Facebook account but is not confirmed yet.', reqUserId);
+          throw new Error('An email was sent to your email address. ' +
+            'Please check your email to confirm your email address before connecting with Facebook.');
+        } else {
+          // User is confirmed. Check if the Facebook ID is already taken.
+          return dbManager.getDb()
+            .collection('users')
+            .find({ facebookId: body.facebookId })
+            .limit(1)
+            .next()
+            .then((existingFbUser) => {
+              if (existingFbUser && existingFbUser._id.toHexString() !== reqUserId) {
+                // Facebook ID is taken by another user
+                debug('Facebook ID is registered to another user', body.facebookId);
+                throw new Error('Your Facebook account is registered with another account. ' +
+                  'Please contact support@gobacbone.com if you need assistance.');
+              }
+              return [user, body];
+            });
+        }
       }
 
       return [user, body];
@@ -156,27 +176,27 @@ export default (req) => {
     .then(([user, body]) => {
       const { email } = body;
 
-      // Check if email is already taken
+      // Check if email is being changed and if the new email is already taken
       if (email && email !== user.email) {
         return dbManager.getDb()
-        .collection('users')
-        .find({ email: new RegExp(`^${email}$`, 'i') })
-        .limit(1)
-        .next()
-        .then((userWithEmail) => {
-          if (userWithEmail) {
-            throw new Error('Email already taken');
-          }
-          return tokenFactory.generateToken()
-            .then(([confirmationToken, confirmationTokenExpiry]) =>
-              Object.assign(body, { confirmationToken, confirmationTokenExpiry })
-            )
-            .then(() => {
-              const emailUtility = EmailUtility.getMailer();
-              return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
-            })
-            .then(() => Object.assign(body, { isConfirmed: false }));
-        });
+          .collection('users')
+          .find({ email: new RegExp(`^${email}$`, 'i') })
+          .limit(1)
+          .next()
+          .then((userWithEmail) => {
+            if (userWithEmail) {
+              throw new Error('Email already taken');
+            }
+            return tokenFactory.generateToken()
+              .then(([confirmationToken, confirmationTokenExpiry]) =>
+                Object.assign(body, { confirmationToken, confirmationTokenExpiry })
+              )
+              .then(() => {
+                const emailUtility = EmailUtility.getMailer();
+                return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
+              })
+              .then(() => Object.assign(body, { isConfirmed: false }));
+          });
       }
       return body;
     })
@@ -185,7 +205,7 @@ export default (req) => {
       dbManager.getDb()
         .collection('users')
         .findOneAndUpdate(
-          { _id: dbManager.mongodb.ObjectID(req.params.id) },
+          { _id: dbManager.mongodb.ObjectID(reqUserId) },
           { $set: updateFields },
           { returnOriginal: false },
         )
