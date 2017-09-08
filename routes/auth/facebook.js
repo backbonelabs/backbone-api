@@ -149,12 +149,12 @@ export default (req, res) => validate(req.body, {
           // user ID to document only if their email is confirmed
           if (!user.facebookId && user.isConfirmed) {
             return dbManager.getDb()
-            .collection('users')
-            .findOneAndUpdate(
-              { email: new RegExp(`^${email}$`, 'i') },
-              { $set: { facebookId } },
-              { returnOriginal: false })
-            .then(updatedDoc => updatedDoc.value);
+              .collection('users')
+              .findOneAndUpdate(
+                { _id: user._id },
+                { $set: { facebookId } },
+                { returnOriginal: false })
+              .then(updatedDoc => updatedDoc.value);
           } else if (!user.isConfirmed) {
             // User is not confirmed so we automatically resend the confirmation
             // email and throw an error back to the app.
@@ -165,7 +165,7 @@ export default (req, res) => validate(req.body, {
                   .findOneAndUpdate(
                     // We use the DB email for confirmation because the user may
                     // have changed their email in the app so won't match their Facebook email.
-                    { email: new RegExp(`^${user.email}$`, 'i') },
+                    { _id: user._id },
                     { $set: { confirmationToken, confirmationTokenExpiry } }
                   )
                   .then(() => {
