@@ -30,14 +30,14 @@ const errorMessages = {
  * API endpoints. The access token is a hash of the user ID and current
  * timestamp separated by a colon.
  *
- * @param  {Object} req               Request
- * @param  {Object} req.body          Request body
- * @param  {String} req.body.email    Email address of the user
- * @param  {String} req.body.facebookUserID Facebook ID of the user
- * @param  {String} req.body.accessToken Facebook accessToken of the user
+ * @param  {Object} req                    Request
+ * @param  {Object} req.body               Request body
+ * @param  {String} req.body.email         Email address of the user
+ * @param  {String} req.body.id            Facebook ID of the user
+ * @param  {String} req.body.accessToken   Facebook accessToken of the user
  * @param  {String} req.body.applicationID Backbone's Facebook applicationID
- * @param  {String} req.body.{data} User's Facebook profile information which
- * includes first name, last name, and gender
+ * @param  {String} req.body.{data}        User's Facebook profile information which
+ *                                         includes first name, last name, and gender
  * @return {Promise} Resolves with a user object that has an accessToken property
  */
 export default (req, res) => validate(req.body, {
@@ -149,12 +149,12 @@ export default (req, res) => validate(req.body, {
           // user ID to document only if their email is confirmed
           if (!user.facebookId && user.isConfirmed) {
             return dbManager.getDb()
-            .collection('users')
-            .findOneAndUpdate(
-              { email: new RegExp(`^${email}$`, 'i') },
-              { $set: { facebookId } },
-              { returnOriginal: false })
-            .then(updatedDoc => updatedDoc.value);
+              .collection('users')
+              .findOneAndUpdate(
+                { _id: user._id },
+                { $set: { facebookId } },
+                { returnOriginal: false })
+              .then(updatedDoc => updatedDoc.value);
           } else if (!user.isConfirmed) {
             // User is not confirmed so we automatically resend the confirmation
             // email and throw an error back to the app.
@@ -165,7 +165,7 @@ export default (req, res) => validate(req.body, {
                   .findOneAndUpdate(
                     // We use the DB email for confirmation because the user may
                     // have changed their email in the app so won't match their Facebook email.
-                    { email: new RegExp(`^${user.email}$`, 'i') },
+                    { _id: user._id },
                     { $set: { confirmationToken, confirmationTokenExpiry } }
                   )
                   .then(() => {
@@ -198,7 +198,7 @@ export default (req, res) => validate(req.body, {
     // Return sanitized user object with access token
     const user = sanitizeUser(result);
     user.accessToken = accessToken;
-    user.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans);
+    user.trainingPlans = mapIdsToTrainingPlans(user.trainingPlans, user.trainingPlanProgress);
     return user;
   })
   .catch((err) => {
