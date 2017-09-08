@@ -18,9 +18,9 @@ const debug = Debug('routes:auth:facebook');
 const errorMessages = {
   invalidCredentials: 'Invalid credentials. Please try again.',
   unverifiedFacebook: 'Please verify your account through Facebook before continuing.',
-  unconfirmedEmail: 'An account has already been registered with the same email ' +
-    'address as your Facebook account. Please check your email to confirm your ' +
-    'email address. If you have any questions, please contact support@gobackbone.com.',
+  unconfirmedEmail: 'Your email address is already registered with another account. ' +
+    'Please check your email to confirm your email address before connecting with your ' +
+    'Facebook account. Please contact support@gobackbone.com if you need assistance.',
 };
 
 /**
@@ -119,16 +119,68 @@ export default (req, res) => validate(req.body, {
       gender = req.body.gender === 'male' ? 1 : 2;
     }
 
-    // Check if there is already a user with existing email or facebookUserID
-    return Promise.all([dbManager.getDb()
-      .collection('users')
-      .findOne({ $or: [
+    const searchQuery = email ? {
+      $or: [
         { email: new RegExp(`^${email}$`, 'i') },
         { facebookId },
-      ] }), getTrainingPlans()])
-      .then(([user, plans]) => {
-        if (!user) {
-          // Create new local user for facebook user
+      ],
+    } : {
+      facebookId,
+    };
+
+    // Check if there is already a user with existing email or Facebook ID
+    return Promise.all([
+      dbManager.getDb()
+        .collection('users')
+        .findOne(searchQuery),
+      getTrainingPlans(),
+    ])
+      .then(([existingUser, plans]) => {
+        if (existingUser) {
+          if (existingUser.facebookId === facebookId) {
+            // A user already exists with the same Facebook ID, return existing user
+            debug('Matched existing user with same Facebook ID', facebookId);
+            return existingUser;
+          } else if (existingUser.isConfirmed) {
+            // A user exists with the same email and is confirmed, add Facebook ID to user
+            debug('Adding Facebook ID to existing user with same confirmed email',
+              existingUser.email, facebookId);
+
+            return dbManager.getDb()
+              .collection('users')
+              .findOneAndUpdate(
+                { _id: existingUser._id },
+                { $set: { facebookId } },
+                { returnOriginal: false }
+              )
+              .then(updatedDoc => updatedDoc.value);
+          } else if (!existingUser.isConfirmed) {
+            // A user exists with the same email but is not confirmed.
+            // Send confirmation email to have them verify their email before they are
+            // able to add the Facebook account.
+            debug('User exists with same email but unconfirmed, sending confirmation email',
+              existingUser.email);
+
+            tokenFactory.generateToken()
+              .then(([confirmationToken, confirmationTokenExpiry]) => (
+                dbManager.getDb()
+                  .collection('users')
+                  .findOneAndUpdate(
+                    { _id: existingUser._id },
+                    { $set: { confirmationToken, confirmationTokenExpiry } }
+                  )
+                  .then(() => {
+                    // Send user confirmation email
+                    const emailUtility = EmailUtility.getMailer();
+                    emailUtility.sendConfirmationEmail(existingUser.email, confirmationToken);
+                  })
+              ));
+
+            throw new Error(errorMessages.unconfirmedEmail);
+          }
+        } else {
+          // There are no existing users with the same email or Facebook ID. Create new user.
+          debug('Creating new Facebook user', facebookId);
           return dbManager.getDb()
             .collection('users')
             .insertOne(userDefaults.mergeWithDefaultData({
@@ -143,41 +195,11 @@ export default (req, res) => validate(req.body, {
               createdAt: new Date(),
               trainingPlans: getDefaultTrainingPlanIds(plans),
             }))
-            .then(newDoc => Object.assign({}, newDoc.ops[0], { isNew: true }));
-        } else if (user.authMethod === constants.authMethods.EMAIL) {
-          // User exist but signed up with email/password so we add their facebook
-          // user ID to document only if their email is confirmed
-          if (!user.facebookId && user.isConfirmed) {
-            return dbManager.getDb()
-              .collection('users')
-              .findOneAndUpdate(
-                { _id: user._id },
-                { $set: { facebookId } },
-                { returnOriginal: false })
-              .then(updatedDoc => updatedDoc.value);
-          } else if (!user.isConfirmed) {
-            // User is not confirmed so we automatically resend the confirmation
-            // email and throw an error back to the app.
-            tokenFactory.generateToken()
-              .then(([confirmationToken, confirmationTokenExpiry]) => (
-                dbManager.getDb()
-                  .collection('users')
-                  .findOneAndUpdate(
-                    // We use the DB email for confirmation because the user may
-                    // have changed their email in the app so won't match their Facebook email.
-                    { _id: user._id },
-                    { $set: { confirmationToken, confirmationTokenExpiry } }
-                  )
-                  .then(() => {
-                    // Initiate sending of user confirmation email
-                    const emailUtility = EmailUtility.getMailer();
-                    emailUtility.sendConfirmationEmail(user.email, confirmationToken);
-                  })
-              ));
-            throw new Error(errorMessages.unconfirmedEmail);
-          }
+            .then((newDoc) => {
+              debug('Created new user');
+              return Object.assign({}, newDoc.ops[0], { isNew: true });
+            });
         }
-        return user;
       });
   })
   .then((result) => {
