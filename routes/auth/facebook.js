@@ -30,14 +30,14 @@ const errorMessages = {
  * API endpoints. The access token is a hash of the user ID and current
  * timestamp separated by a colon.
  *
- * @param  {Object} req               Request
- * @param  {Object} req.body          Request body
- * @param  {String} req.body.email    Email address of the user
- * @param  {String} req.body.facebookUserID Facebook ID of the user
- * @param  {String} req.body.accessToken Facebook accessToken of the user
+ * @param  {Object} req                    Request
+ * @param  {Object} req.body               Request body
+ * @param  {String} req.body.email         Email address of the user
+ * @param  {String} req.body.id            Facebook ID of the user
+ * @param  {String} req.body.accessToken   Facebook accessToken of the user
  * @param  {String} req.body.applicationID Backbone's Facebook applicationID
- * @param  {String} req.body.{data} User's Facebook profile information which
- * includes first name, last name, and gender
+ * @param  {String} req.body.{data}        User's Facebook profile information which
+ *                                         includes first name, last name, and gender
  * @return {Promise} Resolves with a user object that has an accessToken property
  */
 export default (req, res) => validate(req.body, {
