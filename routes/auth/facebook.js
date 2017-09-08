@@ -15,12 +15,21 @@ import {
 } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:facebook');
-const errorMessages = {
-  invalidCredentials: 'Invalid credentials. Please try again.',
-  unverifiedFacebook: 'Please verify your account through Facebook before continuing.',
-  unconfirmedEmail: 'Your email address is already registered with another account. ' +
+export const errors = {
+  invalidCredentials: {
+    message: 'Invalid credentials. Please try again.',
+    code: 401,
+  },
+  unverifiedFacebook: {
+    message: 'Please verify your account through Facebook before continuing.',
+    code: 403,
+  },
+  unconfirmedEmail: {
+    message: 'Your email address is already registered with another account. ' +
     'Please check your email to confirm your email address before connecting with your ' +
     'Facebook account. Please contact support@gobackbone.com if you need assistance.',
+    code: 401,
+  },
 };
 
 /**
@@ -65,11 +74,11 @@ export default (req, res) => validate(req.body, {
 
     // Check if the Facebook account is verified.
     if (!reqVerified) {
-      throw new Error(errorMessages.unverifiedFacebook);
+      throw new Error(errors.unverifiedFacebook.message);
     }
     // Check if the requested app ID is valid against our own env app ID.
     if (reqAppId.toString() !== envAppId.toString()) {
-      throw new Error(errorMessages.invalidCredentials);
+      throw new Error(errors.invalidCredentials.message);
     }
     // Checks if the requested access token is valid by verify the application ID,
     // user ID, and is_valid against data from Facebook servers.
@@ -81,7 +90,7 @@ export default (req, res) => validate(req.body, {
           // Facebook error code for invalid user access token:
           // { code: 190, message: 'Invalid OAuth access token.' }
           if (result.data.error.code === 190) {
-            throw new Error(errorMessages.invalidCredentials);
+            throw new Error(errors.invalidCredentials.message);
           }
           throw new Error(result.data.error.message);
         }
@@ -96,11 +105,11 @@ export default (req, res) => validate(req.body, {
           // Token is valid so we continue to check app and user Id
           if (debugTokenAppId.toString() !== envAppId.toString() ||
               debugTokenUserId.toString() !== reqUserId.toString()) {
-            throw new Error(errorMessages.invalidCredentials);
+            throw new Error(errors.invalidCredentials.message);
           }
         } else {
           // Token is not valid
-          throw new Error(errorMessages.invalidCredentials);
+          throw new Error(errors.invalidCredentials.message);
         }
       });
   })
@@ -176,7 +185,7 @@ export default (req, res) => validate(req.body, {
                   })
               ));
 
-            throw new Error(errorMessages.unconfirmedEmail);
+            throw new Error(errors.unconfirmedEmail.message);
           }
         } else {
           // There are no existing users with the same email or Facebook ID. Create new user.
@@ -224,13 +233,10 @@ export default (req, res) => validate(req.body, {
     return user;
   })
   .catch((err) => {
-    Object.keys(errorMessages).forEach((key) => {
-      if (errorMessages[key] === err.message) {
-        if (key === 'invalidCredentials') {
-          res.status(401);
-        } else {
-          res.status(403);
-        }
+    // Set the status code based on the error type
+    Object.keys(errors).forEach((errorName) => {
+      if (errors[errorName].message === err.message) {
+        res.status(errors[errorName].code);
       }
     });
     throw err;
