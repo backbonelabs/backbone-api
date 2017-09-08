@@ -128,32 +128,33 @@ export default (req) => {
       if (body.facebookId && !user.isConfirmed) {
         // Resends confirmation email
         tokenFactory.generateToken()
-        .then(([confirmationToken, confirmationTokenExpiry]) =>
-          Object.assign({}, { confirmationToken, confirmationTokenExpiry })
-        )
-        .then((tokenResults) => {
-          const emailUtility = EmailUtility.getMailer();
-          emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
-          return tokenResults;
-        })
-        .then((tokenResults) => {
-          dbManager.getDb()
-          .collection('users')
-          .findOneAndUpdate(
-            { _id: dbManager.mongodb.ObjectID(req.params.id) },
-            { $set: tokenResults },
-            { returnOriginal: false },
-          );
-        });
+          .then(([confirmationToken, confirmationTokenExpiry]) => ({
+            confirmationToken,
+            confirmationTokenExpiry,
+          }))
+          .then((tokenResults) => {
+            const emailUtility = EmailUtility.getMailer();
+            emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
+            return tokenResults;
+          })
+          .then((tokenResults) => {
+            dbManager.getDb()
+              .collection('users')
+              .findOneAndUpdate(
+                { _id: dbManager.mongodb.ObjectID(req.params.id) },
+                { $set: tokenResults },
+                { returnOriginal: false },
+              );
+          });
+
         throw new Error('An email was sent to your email address. ' +
-        'Please check your email to confirm your email address before connecting with Facebook.');
+          'Please check your email to confirm your email address before connecting with Facebook.');
       }
 
       return [user, body];
     })
     .then(([user, body]) => {
       const { email } = body;
-
 
       // Check if email is already taken
       if (email && email !== user.email) {
