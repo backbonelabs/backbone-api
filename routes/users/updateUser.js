@@ -82,10 +82,6 @@ export default (req) => {
         password: pw,
         verifyPassword,
         currentPassword,
-        facebookAppId,
-        facebookAccessToken,
-        facebookEmail,
-        facebookVerified,
         ...updateFields
       } = reqBody;
 
@@ -100,7 +96,7 @@ export default (req) => {
       }
 
       if (pw || verifyPassword) {
-        // Make sure password and verifyPassword are the same
+        // Password is being changed, make sure password and verifyPassword are the same
         if (pw !== verifyPassword) {
           throw new Error(errors.nonMatchingPasswords);
         }
@@ -125,11 +121,14 @@ export default (req) => {
           });
       }
 
-      // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
+      return [user, updateFields];
+    })
+    .then(([user, updateFields]) => {
+      // Check if the workout Ids in favoriteWorkouts matches the workout Ids from database
       if (updateFields.favoriteWorkouts) {
         return getWorkouts().then((workoutsFromCache) => {
           // Remove duplicate workout Ids
-          updateFields.favoriteWorkouts = uniq(updateFields.favoriteWorkouts);
+          Object.assign(updateFields, { favoriteWorkouts: uniq(updateFields.favoriteWorkouts) });
 
           // Put all workouts into a hash table
           const workoutsHashTable = {};
@@ -145,13 +144,27 @@ export default (req) => {
             throw new Error(errors.invalidWorkout);
           }
           // Converts workout Id strings to Mongo objects
-          updateFields.favoriteWorkouts = updateFields.favoriteWorkouts.map(workout =>
-            dbManager.mongodb.ObjectId(workout)
-          );
+          Object.assign(updateFields, {
+            favoriteWorkouts: updateFields.favoriteWorkouts.map(workout =>
+              dbManager.mongodb.ObjectId(workout)
+            ),
+          });
           return [user, updateFields];
         });
       }
 
+      return [user, updateFields];
+    })
+    .then(([user, updates]) => {
+      const {
+        facebookAppId,
+        facebookAccessToken,
+        facebookEmail,
+        facebookVerified,
+        ...updateFields
+      } = updates;
+
+      // Check if user is adding a Facebook account
       if (updateFields.facebookId && updateFields.facebookId !== user.facebookId) {
         // User is adding a Facebook account
         const envFbAppId = process.env.FB_APP_ID;
@@ -248,9 +261,8 @@ export default (req) => {
       return [user, updateFields];
     })
     .then(([user, updateFields]) => {
-      const { email } = updateFields;
-
       // Check if email is being changed and if the new email is already taken
+      const { email } = updateFields;
       if (email && email !== user.email) {
         return dbManager.getDb()
           .collection('users')
@@ -259,8 +271,10 @@ export default (req) => {
           .next()
           .then((userWithEmail) => {
             if (userWithEmail) {
+              debug(`Attempted to update email, but ${email} is already taken`);
               throw new Error(errors.emailTaken);
             }
+            // Email is available, generate an email confirmation token and send confirmation email
             return tokenFactory.generateToken()
               .then(([confirmationToken, confirmationTokenExpiry]) =>
                 Object.assign(updateFields, { confirmationToken, confirmationTokenExpiry })
@@ -269,7 +283,7 @@ export default (req) => {
                 const emailUtility = EmailUtility.getMailer();
                 return emailUtility.sendConfirmationEmail(email, updateFields.confirmationToken);
               })
-              .then(() => Object.assign(updateFields, { isConfirmed: false }));
+              .then(() => Object.assign(updateFields, { isConfirmed: false })); // Mark unconfirmed
           });
       }
       return updateFields;
