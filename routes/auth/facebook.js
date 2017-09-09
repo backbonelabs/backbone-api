@@ -195,7 +195,8 @@ export default (req, res) => validate(req.body, {
                   .then(() => {
                     // Send user confirmation email
                     const emailUtility = EmailUtility.getMailer();
-                    return emailUtility.sendConfirmationEmail(existingUser.email, confirmationToken);
+                    return emailUtility
+                      .sendConfirmationEmail(existingUser.email, confirmationToken);
                   })
                   .then(() => {
                     throw new Error(errors.unconfirmedEmail.message);
