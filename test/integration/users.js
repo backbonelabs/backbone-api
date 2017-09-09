@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import request from 'supertest';
+import requestPromise from 'request-promise';
 import mongodb, { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
 import randomString from 'random-string';
@@ -10,6 +11,7 @@ import constants from '../../lib/constants';
 import EmailUtility from '../../lib/EmailUtility';
 import tokenFactory from '../../lib/tokenFactory';
 import { getWorkouts } from '../../lib/trainingPlans';
+import { errors as fbErrors } from '../../routes/users/updateUser';
 
 let emailUtility;
 let app;
@@ -19,7 +21,9 @@ let fbUserFixture2 = {};
 let userFixture1 = {};
 let userFixture2 = {};
 let userFixture3 = {};
+let userFixture4 = {};
 let defaultTrainingPlans = [];
+let fbTestUsers = [];
 
 const { mergeWithDefaultData } = userDefaults;
 const testEmail1 = `test.${randomString()}@${randomString()}.com`;
@@ -27,6 +31,7 @@ const testEmail2 = `test.${randomString()}@${randomString()}.com`;
 const testEmail3 = `test.${randomString()}@${randomString()}.com`;
 const testEmail4 = `test.${randomString()}@${randomString()}.com`;
 const testEmail5 = `test.${randomString()}@${randomString()}.com`;
+const testEmail6 = `test.${randomString()}@${randomString()}.com`;
 const testPassword = 'Abcdef01';
 const testPasswordHash = bcrypt.hashSync(testPassword, 10);
 const testAccessToken1 = randomString({ length: 64 });
@@ -34,6 +39,7 @@ const testAccessToken2 = randomString({ length: 64 });
 const testAccessToken3 = randomString({ length: 64 });
 const testAccessToken4 = randomString({ length: 64 });
 const testAccessToken5 = randomString({ length: 64 });
+const testAccessToken6 = randomString({ length: 64 });
 const userIdsToDelete = [];
 const accessTokensToDelete = [
   testAccessToken1,
@@ -41,105 +47,137 @@ const accessTokensToDelete = [
   testAccessToken3,
   testAccessToken4,
   testAccessToken5,
+  testAccessToken6,
 ];
-
-before(() => (
-  Promise.resolve(server)
-    .then((expressApp) => {
-      app = expressApp;
-    })
-    .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-    .then((mDb) => {
-      db = mDb;
-    })
-    .then(() => {
-      const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
-
-      return db.collection('trainingPlans')
-        .find({ name: { $in: defaultTrainingPlanNames } })
-        .toArray()
-        .then((trainingPlans) => {
-          defaultTrainingPlans = trainingPlans;
-        });
-    })
-    .then(() => (
-      db.collection('users')
-      .insertMany([
-        mergeWithDefaultData({
-          email: testEmail1,
-          password: testPasswordHash,
-        }),
-        mergeWithDefaultData({
-          email: testEmail2,
-          password: testPasswordHash,
-        }),
-        mergeWithDefaultData({
-          email: testEmail3,
-          authMethod: constants.authMethods.FACEBOOK,
-        }),
-        mergeWithDefaultData({
-          email: null,
-          authMethod: constants.authMethods.FACEBOOK,
-        }),
-        mergeWithDefaultData({
-          email: testEmail5,
-          password: testPasswordHash,
-          isConfirmed: true,
-        }),
-      ])
-    ))
-    .then((results) => {
-      const { ops } = results;
-      userFixture1 = ops[0];
-      userFixture2 = ops[1];
-      userFixture3 = ops[4];
-      userFixture1._id = userFixture1._id.toHexString();
-      userFixture2._id = userFixture2._id.toHexString();
-      userFixture3._id = userFixture3._id.toHexString();
-      fbUserFixture1 = ops[2];
-      fbUserFixture1._id = fbUserFixture1._id.toHexString();
-      fbUserFixture2 = ops[3];
-      fbUserFixture2._id = fbUserFixture2._id.toHexString();
-      userIdsToDelete.push(
-        userFixture1._id,
-        userFixture2._id,
-        userFixture3._id,
-        fbUserFixture1._id,
-        fbUserFixture2._id,
-      );
-    })
-    .then(() => (
-      db.collection('accessTokens')
-        .insertMany([{
-          userId: mongodb.ObjectID(userFixture1._id),
-          accessToken: testAccessToken1,
-        }, {
-          userId: mongodb.ObjectID(userFixture2._id),
-          accessToken: testAccessToken2,
-        }, {
-          userId: mongodb.ObjectID(userFixture3._id),
-          accessToken: testAccessToken5,
-        }, {
-          userId: mongodb.ObjectID(fbUserFixture1._id),
-          accessToken: testAccessToken3,
-        }, {
-          userId: mongodb.ObjectID(fbUserFixture2._id),
-          accessToken: testAccessToken4,
-        }])
-    ))
-));
-
-after(() => (
-  db.collection('accessTokens')
-    .deleteMany({ accessToken: { $in: accessTokensToDelete } })
-    .then(() => db.collection('users').deleteMany({
-      _id: {
-        $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
-      },
-    }))
-));
+const fbAppId = process.env.FB_APP_ID;
 
 describe('/users router', () => {
+  before(() => (
+    Promise.resolve(server)
+      .then((expressApp) => {
+        app = expressApp;
+      })
+      .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+      .then((mDb) => {
+        db = mDb;
+      })
+      .then(() => {
+        const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
+
+        return db.collection('trainingPlans')
+          .find({ name: { $in: defaultTrainingPlanNames } })
+          .toArray()
+          .then((trainingPlans) => {
+            defaultTrainingPlans = trainingPlans;
+          });
+      })
+      .then(() => {
+        // Retrieve Facebook test users
+        const options = {
+          method: 'GET',
+          uri: `https://graph.facebook.com/v2.10/${process.env.FB_APP_ID}/accounts/test-users/`,
+          qs: {
+            fields: 'access_token',
+            access_token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`,
+          },
+          json: true,
+        };
+
+        return requestPromise(options)
+          .then((body) => {
+            fbTestUsers = body.data;
+          });
+      })
+      .then(() => (
+        db.collection('users')
+        .insertMany([
+          mergeWithDefaultData({
+            email: testEmail1,
+            password: testPasswordHash,
+          }),
+          mergeWithDefaultData({
+            email: testEmail2,
+            password: testPasswordHash,
+          }),
+          mergeWithDefaultData({
+            email: testEmail3,
+            password: testPasswordHash,
+            isConfirmed: true,
+          }),
+          mergeWithDefaultData({
+            email: testEmail4,
+            password: testPasswordHash,
+          }),
+          mergeWithDefaultData({
+            email: testEmail5,
+            isConfirmed: true,
+            authMethod: constants.authMethods.FACEBOOK,
+            facebookId: fbTestUsers[0].id,
+          }),
+          mergeWithDefaultData({
+            email: null,
+            authMethod: constants.authMethods.FACEBOOK,
+          }),
+        ])
+      ))
+      .then((results) => {
+        const { ops } = results;
+        userFixture1 = ops[0];
+        userFixture2 = ops[1];
+        userFixture3 = ops[2];
+        userFixture4 = ops[3];
+        fbUserFixture1 = ops[4];
+        fbUserFixture2 = ops[5];
+        userFixture1._id = userFixture1._id.toHexString();
+        userFixture2._id = userFixture2._id.toHexString();
+        userFixture3._id = userFixture3._id.toHexString();
+        userFixture4._id = userFixture4._id.toHexString();
+        fbUserFixture1._id = fbUserFixture1._id.toHexString();
+        fbUserFixture2._id = fbUserFixture2._id.toHexString();
+
+        userIdsToDelete.push(
+          userFixture1._id,
+          userFixture2._id,
+          userFixture3._id,
+          userFixture4._id,
+          fbUserFixture1._id,
+          fbUserFixture2._id,
+        );
+      })
+      .then(() => (
+        db.collection('accessTokens')
+          .insertMany([{
+            userId: mongodb.ObjectID(userFixture1._id),
+            accessToken: testAccessToken1,
+          }, {
+            userId: mongodb.ObjectID(userFixture2._id),
+            accessToken: testAccessToken2,
+          }, {
+            userId: mongodb.ObjectID(userFixture3._id),
+            accessToken: testAccessToken3,
+          }, {
+            userId: mongodb.ObjectID(userFixture4._id),
+            accessToken: testAccessToken4,
+          }, {
+            userId: mongodb.ObjectID(fbUserFixture1._id),
+            accessToken: testAccessToken5,
+          }, {
+            userId: mongodb.ObjectID(fbUserFixture2._id),
+            accessToken: testAccessToken6,
+          }])
+      ))
+  ));
+
+  after(() => (
+    db.collection('accessTokens')
+      .deleteMany({ accessToken: { $in: accessTokensToDelete } })
+      .then(() => db.collection('users').deleteMany({
+        _id: {
+          $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
+        },
+      }))
+  ));
+
   describe('POST /', () => {
     let sendConfirmationEmailStub;
 
@@ -577,7 +615,7 @@ describe('/users router', () => {
       const newPassword = 'abcd1234';
       request(app)
         .post(`/users/${fbUserFixture1._id}`)
-        .set('Authorization', `Bearer ${testAccessToken3}`)
+        .set('Authorization', `Bearer ${testAccessToken5}`)
         .send({
           currentPassword: testPassword,
           password: newPassword,
@@ -587,45 +625,141 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should update email on Facebook account with no email', (done) => {
+    it('should update email on Facebook account with no previous email', (done) => {
       request(app)
         .post(`/users/${fbUserFixture2._id}`)
-        .set('Authorization', `Bearer ${testAccessToken4}`)
+        .set('Authorization', `Bearer ${testAccessToken6}`)
         .send({
-          email: testEmail4,
+          email: testEmail6,
         })
         .expect(200)
         .expect((res) => {
-          expect(res.body.email).to.be.testEmail4;
+          expect(res.body.email).to.equal(testEmail6);
+          expect(res.body.isConfirmed).to.be.false;
         })
         .end(done);
     });
 
-    it('should reject FacebookId on unconfirmed email accounts', (done) => {
-      const facebookId = 12345678;
-      assertRequest({ facebookId })
-      .expect(400)
-      .expect((res) => {
-        expect(sendConfirmationEmailStub.callCount).to.equal(1);
-        expect(res.body.error).to.equal('An email was sent to your email address. ' +
-        'Please check your email to confirm your email address before connecting with Facebook.');
+    it('should reject Facebook ID update when missing Facebook access token', (done) => {
+      const facebookId = fbTestUsers[1].id;
+      assertRequest({
+        facebookId,
+        facebookAppId: fbAppId,
+        facebookVerified: true,
       })
-      .end(done);
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).to.equal(fbErrors.missingFacebookAccessToken);
+        })
+        .end(done);
     });
 
-    it('should accept FacebookId on confirmed email accounts', (done) => {
-      const facebookId = 12345678;
-      request(app)
-      .post(`/users/${userFixture3._id}`)
-      .set('Authorization', `Bearer ${testAccessToken5}`)
-      .send({ facebookId })
-      .expect(200)
-      .expect((res) => {
-        const { body } = res;
-        expect(body._id).to.equal(userFixture3._id);
-        expect(body.facebookId).to.equal(facebookId);
+    it('should reject Facebook ID update when missing Facebook app ID', (done) => {
+      const facebookId = fbTestUsers[1].id;
+      assertRequest({
+        facebookId,
+        facebookAccessToken: fbTestUsers[1].access_token,
+        facebookVerified: true,
       })
-      .end(done);
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).to.equal(fbErrors.missingFacebookAppId);
+        })
+        .end(done);
+    });
+
+    it('should reject Facebook ID update when missing Facebook verified', (done) => {
+      const facebookId = fbTestUsers[1].id;
+      assertRequest({
+        facebookId,
+        facebookAccessToken: fbTestUsers[1].access_token,
+        facebookAppId: fbAppId,
+      })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).to.equal(fbErrors.unverifiedFacebook);
+        })
+        .end(done);
+    });
+
+    it('should reject Facebook ID if taken by another confirmed user', (done) => {
+      const facebookId = fbUserFixture1.facebookId;
+      assertRequest({
+        facebookId,
+        facebookAccessToken: fbTestUsers[1].access_token,
+        facebookAppId: fbAppId,
+        facebookVerified: true,
+      })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).to.equal(fbErrors.facebookTaken);
+        })
+        .end(done);
+    });
+
+    it('should accept Facebook ID for an unconfirmed user', (done) => {
+      expect(userFixture2.isConfirmed).to.be.false;
+      const facebookId = fbTestUsers[1].id;
+      request(app)
+        .post(`/users/${userFixture2._id}`)
+        .set('Authorization', `Bearer ${testAccessToken2}`)
+        .send({
+          facebookId,
+          facebookAccessToken: fbTestUsers[1].access_token,
+          facebookAppId: fbAppId,
+          facebookVerified: true,
+        })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture2._id);
+          expect(body.facebookId).to.equal(facebookId);
+          expect(body.isConfirmed).to.be.false;
+        })
+        .end(done);
+    });
+
+    it('should accept Facebook ID for a confirmed user', (done) => {
+      const facebookId = fbTestUsers[2].id;
+      request(app)
+        .post(`/users/${userFixture3._id}`)
+        .set('Authorization', `Bearer ${testAccessToken3}`)
+        .send({
+          facebookId,
+          facebookAccessToken: fbTestUsers[2].access_token,
+          facebookAppId: fbAppId,
+          facebookVerified: true,
+        })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture3._id);
+          expect(body.facebookId).to.equal(facebookId);
+        })
+        .end(done);
+    });
+
+    it('should accept Facebook ID and email for unconfirmed user and update user to confirm', (done) => {
+      expect(userFixture4.isConfirmed).to.be.false;
+      const facebookId = fbTestUsers[3].id;
+      request(app)
+        .post(`/users/${userFixture4._id}`)
+        .set('Authorization', `Bearer ${testAccessToken4}`)
+        .send({
+          facebookId,
+          facebookAccessToken: fbTestUsers[3].access_token,
+          facebookAppId: fbAppId,
+          facebookVerified: true,
+          facebookEmail: userFixture4.email,
+        })
+        .expect(200)
+        .expect((res) => {
+          const { body } = res;
+          expect(body._id).to.equal(userFixture4._id);
+          expect(body.facebookId).to.equal(facebookId);
+          expect(body.isConfirmed).to.be.true;
+        })
+        .end(done);
     });
   });
 
