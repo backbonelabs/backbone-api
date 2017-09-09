@@ -184,7 +184,7 @@ export default (req, res) => validate(req.body, {
             debug('User exists with same email but unconfirmed, sending confirmation email',
               existingUser.email);
 
-            tokenFactory.generateToken()
+            return tokenFactory.generateToken()
               .then(([confirmationToken, confirmationTokenExpiry]) => (
                 dbManager.getDb()
                   .collection('users')
@@ -195,11 +195,12 @@ export default (req, res) => validate(req.body, {
                   .then(() => {
                     // Send user confirmation email
                     const emailUtility = EmailUtility.getMailer();
-                    emailUtility.sendConfirmationEmail(existingUser.email, confirmationToken);
+                    return emailUtility.sendConfirmationEmail(existingUser.email, confirmationToken);
+                  })
+                  .then(() => {
+                    throw new Error(errors.unconfirmedEmail.message);
                   })
               ));
-
-            throw new Error(errors.unconfirmedEmail.message);
           }
         } else {
           // There are no existing users with the same email or Facebook ID. Create new user.

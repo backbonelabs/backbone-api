@@ -136,8 +136,8 @@ export default (req) => {
             }))
             .then((tokenResults) => {
               const emailUtility = EmailUtility.getMailer();
-              emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
-              return tokenResults;
+              return emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken)
+                .then(() => tokenResults);
             })
             .then((tokenResults) => {
               dbManager.getDb()
