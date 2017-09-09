@@ -12,6 +12,19 @@ import constants from '../../lib/constants';
 
 const debug = Debug('routes:users:updateUsers');
 
+export const errors = {
+  invalidUserId: 'Invalid user id',
+  nonMatchingPasswords: 'Passwords must match',
+  disallowPasswordChange: 'Password change is not allowed',
+  incorrectPassword: 'Current password is incorrect',
+  invalidWorkout: 'Invalid workout',
+  unconfirmedEmail: 'An email was sent to your email address. ' +
+    'Please check your email to confirm your email address before connecting with Facebook.',
+  facebookTaken: 'Your Facebook account is registered with another account. ' +
+    'Please contact support@gobacbone.com if you need assistance.',
+  emailTaken: 'Email already taken',
+};
+
 /**
  * Updates a user
  * @param  {Object} req           Request
@@ -51,7 +64,7 @@ export default (req) => {
             return user;
           }
           debug('Did not find user by id', reqUserId);
-          throw new Error('Invalid user id');
+          throw new Error(errors.invalidUserId);
         })
     ))
     .then((user) => {
@@ -75,19 +88,19 @@ export default (req) => {
       if (pw || verifyPassword) {
         // Make sure password and verifyPassword are the same
         if (pw !== verifyPassword) {
-          throw new Error('Passwords must match');
+          throw new Error(errors.nonMatchingPasswords);
         }
 
         if (user.authMethod !== constants.authMethods.EMAIL) {
-          throw new Error('Password change is not allowed');
+          throw new Error(errors.disallowPasswordChange);
         }
 
         return password.verify(currentPassword, user.password)
           .then((isPasswordMatch) => {
             // If password doesn't match
             if (!isPasswordMatch) {
-              debug('Invalid password');
-              throw new Error('Current password is incorrect');
+              debug('Incorrect password');
+              throw new Error(errors.incorrectPassword);
             }
             // Hash password
             return password.hash(pw)
@@ -115,7 +128,7 @@ export default (req) => {
           );
 
           if (!isFavoriteWorkoutsValid) {
-            throw new Error('Invalid workout');
+            throw new Error(errors.invalidWorkout);
           }
           // Converts workout Id strings to Mongo objects
           body.favoriteWorkouts = body.favoriteWorkouts.map(workout =>
@@ -150,8 +163,7 @@ export default (req) => {
             });
 
           debug('User attempted to add a Facebook account but is not confirmed yet.', reqUserId);
-          throw new Error('An email was sent to your email address. ' +
-            'Please check your email to confirm your email address before connecting with Facebook.');
+          throw new Error(errors.unconfirmedEmail);
         } else {
           // User is confirmed. Check if the Facebook ID is already taken.
           return dbManager.getDb()
@@ -163,8 +175,7 @@ export default (req) => {
               if (existingFbUser && existingFbUser._id.toHexString() !== reqUserId) {
                 // Facebook ID is taken by another user
                 debug('Facebook ID is registered to another user', body.facebookId);
-                throw new Error('Your Facebook account is registered with another account. ' +
-                  'Please contact support@gobacbone.com if you need assistance.');
+                throw new Error(errors.facebookTaken);
               }
               return [user, body];
             });
@@ -185,7 +196,7 @@ export default (req) => {
           .next()
           .then((userWithEmail) => {
             if (userWithEmail) {
-              throw new Error('Email already taken');
+              throw new Error(errors.emailTaken);
             }
             return tokenFactory.generateToken()
               .then(([confirmationToken, confirmationTokenExpiry]) =>
@@ -210,14 +221,9 @@ export default (req) => {
           { returnOriginal: false },
         )
     ))
-    .then((user) => {
-      if (!user.value) {
-        // User ID doesn't exist
-        throw new Error('Invalid user');
-      }
-
+    .then((updatedDoc) => {
       // Omit password
-      const sanitizedUser = sanitizeUser(user.value);
+      const sanitizedUser = sanitizeUser(updatedDoc.value);
 
       // Add training plans details
       sanitizedUser.trainingPlans =
