@@ -49,6 +49,13 @@ const accessTokensToDelete = [
   testAccessToken5,
   testAccessToken6,
 ];
+const testWorkoutName1 = randomString();
+const testWorkoutName2 = randomString();
+const testWorkouts = [{
+  title: testWorkoutName1,
+}, {
+  title: testWorkoutName2,
+}];
 const fbAppId = process.env.FB_APP_ID;
 
 describe('/users router', () => {
@@ -61,6 +68,11 @@ describe('/users router', () => {
       .then((mDb) => {
         db = mDb;
       })
+      .then(() => (
+        // Insert test workouts
+        db.collection('workouts')
+          .insertMany(testWorkouts)
+      ))
       .then(() => {
         const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
 
@@ -168,15 +180,24 @@ describe('/users router', () => {
       ))
   ));
 
-  after(() => (
+  after(() => Promise.all([
     db.collection('accessTokens')
-      .deleteMany({ accessToken: { $in: accessTokensToDelete } })
-      .then(() => db.collection('users').deleteMany({
+      .deleteMany({ accessToken: { $in: accessTokensToDelete } }),
+
+    db.collection('users')
+      .deleteMany({
         _id: {
           $in: userIdsToDelete.map(id => mongodb.ObjectID(id)),
         },
-      }))
-  ));
+      }),
+
+    db.collection('workouts')
+      .deleteMany({
+        _id: {
+          $in: testWorkouts.map(workout => workout._id),
+        },
+      }),
+  ]));
 
   describe('POST /', () => {
     let sendConfirmationEmailStub;
