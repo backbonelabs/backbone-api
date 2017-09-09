@@ -1,5 +1,7 @@
 import Debug from 'debug';
+import request from 'request-promise';
 import uniq from 'lodash/uniq';
+import Joi from 'joi';
 import validate from '../../lib/validate';
 import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
@@ -20,9 +22,13 @@ export const errors = {
   invalidWorkout: 'Invalid workout',
   unconfirmedEmail: 'An email was sent to your email address. ' +
     'Please check your email to confirm your email address before connecting with Facebook.',
+  missingFacebookAccessToken: 'Missing Facebook access token.',
+  missingFacebookAppId: 'Missing Facebook application ID',
   facebookTaken: 'Your Facebook account is registered with another account. ' +
     'Please contact support@gobacbone.com if you need assistance.',
-  emailTaken: 'Email already taken',
+  invalidCredentials: 'Invalid Facebook credentials.',
+  unverifiedFacebook: 'Please verify your Facebook account before continuing.',
+  emailTaken: 'Email is already taken.',
 };
 
 /**
@@ -50,6 +56,10 @@ export default (req) => {
     currentPassword: schemas.password,
     password: schemas.password,
     verifyPassword: schemas.password,
+    facebookAccessToken: schemas.facebook.accessToken,
+    facebookAppId: schemas.facebook.applicationID,
+    facebookEmail: Joi.string().email(),
+    facebookVerified: Joi.boolean(),
   }), [], ['_id'])
     .then(() => (
       // Make sure user exists
@@ -72,17 +82,21 @@ export default (req) => {
         password: pw,
         verifyPassword,
         currentPassword,
-        ...body
+        facebookAppId,
+        facebookAccessToken,
+        facebookEmail,
+        facebookVerified,
+        ...updateFields
       } = reqBody;
 
       // Ensure birthdate gets saved as ISODate by making it a JS Date object
-      if (body.birthdate) {
-        body.birthdate = new Date(body.birthdate);
+      if (updateFields.birthdate) {
+        updateFields.birthdate = new Date(updateFields.birthdate);
       }
 
       // Ensure lastSession gets saved as ISODate by making it a JS Date object
-      if (body.lastSession) {
-        body.lastSession = new Date(body.lastSession);
+      if (updateFields.lastSession) {
+        updateFields.lastSession = new Date(updateFields.lastSession);
       }
 
       if (pw || verifyPassword) {
@@ -105,17 +119,17 @@ export default (req) => {
             // Hash password
             return password.hash(pw)
               .then((hash) => {
-                body.password = hash;
-                return [user, body];
+                updateFields.password = hash;
+                return [user, updateFields];
               });
           });
       }
 
       // Checks if the workout Ids in favoriteWorkouts matches the workout Ids from database
-      if (body.favoriteWorkouts) {
+      if (updateFields.favoriteWorkouts) {
         return getWorkouts().then((workoutsFromCache) => {
           // Remove duplicate workout Ids
-          body.favoriteWorkouts = uniq(body.favoriteWorkouts);
+          updateFields.favoriteWorkouts = uniq(updateFields.favoriteWorkouts);
 
           // Put all workouts into a hash table
           const workoutsHashTable = {};
@@ -123,7 +137,7 @@ export default (req) => {
             workoutsHashTable[workout._id] = workout;
           });
 
-          const isFavoriteWorkoutsValid = body.favoriteWorkouts.every(
+          const isFavoriteWorkoutsValid = updateFields.favoriteWorkouts.every(
             favoriteWorkoutId => workoutsHashTable[favoriteWorkoutId]
           );
 
@@ -131,61 +145,110 @@ export default (req) => {
             throw new Error(errors.invalidWorkout);
           }
           // Converts workout Id strings to Mongo objects
-          body.favoriteWorkouts = body.favoriteWorkouts.map(workout =>
-              dbManager.mongodb.ObjectId(workout)
-            );
-          return [user, body];
+          updateFields.favoriteWorkouts = updateFields.favoriteWorkouts.map(workout =>
+            dbManager.mongodb.ObjectId(workout)
+          );
+          return [user, updateFields];
         });
       }
 
-      if (body.facebookId && body.facebookId !== user.facebookId) {
+      if (updateFields.facebookId && updateFields.facebookId !== user.facebookId) {
         // User is adding a Facebook account
-        if (!user.isConfirmed) {
-          // User is not confirmed yet, resend confirmation email
-          tokenFactory.generateToken()
-            .then(([confirmationToken, confirmationTokenExpiry]) => ({
-              confirmationToken,
-              confirmationTokenExpiry,
-            }))
-            .then((tokenResults) => {
-              const emailUtility = EmailUtility.getMailer();
-              return emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken)
-                .then(() => tokenResults);
-            })
-            .then((tokenResults) => {
-              dbManager.getDb()
-                .collection('users')
-                .findOneAndUpdate(
-                  { _id: dbManager.mongodb.ObjectID(reqUserId) },
-                  { $set: tokenResults },
-                  { returnOriginal: false },
-                );
-            });
+        const envFbAppId = process.env.FB_APP_ID;
+        const envFbAppSecret = process.env.FB_APP_SECRET;
 
-          debug('User attempted to add a Facebook account but is not confirmed yet.', reqUserId);
-          throw new Error(errors.unconfirmedEmail);
-        } else {
-          // User is confirmed. Check if the Facebook ID is already taken.
-          return dbManager.getDb()
-            .collection('users')
-            .find({ facebookId: body.facebookId })
-            .limit(1)
-            .next()
-            .then((existingFbUser) => {
-              if (existingFbUser && existingFbUser._id.toHexString() !== reqUserId) {
-                // Facebook ID is taken by another user
-                debug('Facebook ID is registered to another user', body.facebookId);
-                throw new Error(errors.facebookTaken);
-              }
-              return [user, body];
-            });
+        if (!facebookAccessToken) {
+          // Missing Facebook access token
+          throw new Error(errors.missingFacebookAccessToken);
         }
+
+        if (!facebookAppId) {
+          // Missing Facebook app ID
+          throw new Error(errors.missingFacebookAppId);
+        }
+
+        if (facebookAppId.toString() !== envFbAppId.toString()) {
+          // Incorrect app ID
+          throw new Error(errors.invalidCredentials);
+        }
+
+        if (!facebookVerified) {
+          // Facebook account is not verified
+          throw new Error(errors.unverifiedFacebook);
+        }
+
+        // Check if Facebook ID is already taken
+        return dbManager.getDb()
+          .collection('users')
+          .find({ facebookId: updateFields.facebookId })
+          .limit(1)
+          .next()
+          .then((existingFbUser) => {
+            if (existingFbUser && existingFbUser._id.toHexString() !== reqUserId) {
+              // Facebook ID is taken by another user
+              debug('Facebook ID is registered to another user', updateFields.facebookId);
+              throw new Error(errors.facebookTaken);
+            }
+          })
+          .then(() => {
+            // Facebook ID not taken by any other user. Verify Facebook ID is valid.
+            const options = {
+              method: 'GET',
+              uri: 'https://graph.facebook.com/debug_token',
+              qs: {
+                input_token: facebookAccessToken,
+                access_token: `${envFbAppId}|${envFbAppSecret}`,
+              },
+              json: true,
+            };
+
+            return request(options)
+              .then((result) => {
+                if (result.data.error) {
+                  debug('Failed to verify Facebook user access token', result.data.error);
+                  // Facebook error code for invalid user access token:
+                  // { code: 190, message: 'Invalid OAuth access token.' }
+                  if (result.data.error.code === 190) {
+                    throw new Error(errors.invalidCredentials);
+                  }
+                  throw new Error(result.data.error.message);
+                }
+
+                const {
+                  app_id: debugTokenAppId,
+                  is_valid: debugTokenIsValid,
+                  user_id: debugTokenUserId,
+                } = result.data;
+
+                if (debugTokenIsValid) {
+                  // Token is valid so we continue to check app and user Id
+                  if (debugTokenAppId.toString() !== envFbAppId.toString() ||
+                      debugTokenUserId.toString() !== updateFields.facebookId.toString()) {
+                    throw new Error(errors.invalidCredentials);
+                  }
+                } else {
+                  // Token is not valid
+                  throw new Error(errors.invalidCredentials);
+                }
+              });
+          })
+          .then(() => {
+            // Facebook ID is valid
+            if (!user.isConfirmed && facebookEmail && user.email &&
+              user.email.toLowerCase() === facebookEmail.toLowerCase()) {
+              // User's current email is the same as the Facebook email and user's email is
+              // not yet confirmed. Since the Facebook email is already verified at this point,
+              // mark the user as confirmed.
+              updateFields.isConfirmed = true;
+            }
+            return [user, updateFields];
+          });
       }
 
-      return [user, body];
+      return [user, updateFields];
     })
-    .then(([user, body]) => {
-      const { email } = body;
+    .then(([user, updateFields]) => {
+      const { email } = updateFields;
 
       // Check if email is being changed and if the new email is already taken
       if (email && email !== user.email) {
@@ -200,16 +263,16 @@ export default (req) => {
             }
             return tokenFactory.generateToken()
               .then(([confirmationToken, confirmationTokenExpiry]) =>
-                Object.assign(body, { confirmationToken, confirmationTokenExpiry })
+                Object.assign(updateFields, { confirmationToken, confirmationTokenExpiry })
               )
               .then(() => {
                 const emailUtility = EmailUtility.getMailer();
-                return emailUtility.sendConfirmationEmail(email, body.confirmationToken);
+                return emailUtility.sendConfirmationEmail(email, updateFields.confirmationToken);
               })
-              .then(() => Object.assign(body, { isConfirmed: false }));
+              .then(() => Object.assign(updateFields, { isConfirmed: false }));
           });
       }
-      return body;
+      return updateFields;
     })
     .then(updateFields => (
       // Attempt to update the user
