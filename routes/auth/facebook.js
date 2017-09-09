@@ -150,20 +150,21 @@ export default (req, res) => validate(req.body, {
             // A user already exists with the same Facebook ID, return existing user
             debug('Matched existing user with same Facebook ID', facebookId);
 
-            if (existingUser.isConfirmed) {
-              // Existing user already has a confirmed email, return as is
-              return existingUser;
+            if (!existingUser.isConfirmed && existingUser.email === email) {
+              // Existing user has an unconfirmed email and it's the same as the email
+              // in the request. Mark user as confirmed since the email from the Facebook
+              // account is already verified.
+              return dbManager.getDb()
+                .collection('users')
+                .findOneAndUpdate(
+                  { _id: existingUser._id },
+                  { $set: { isConfirmed: true } },
+                  { returnOriginal: false }
+                )
+                .then(updatedDoc => updatedDoc.value);
             }
-            // Existing user has an unconfirmed email, mark as confirm since the
-            // email from the Facebook account is already verified
-            return dbManager.getDb()
-              .collection('users')
-              .findOneAndUpdate(
-                { _id: existingUser._id },
-                { $set: { isConfirmed: true } },
-                { returnOriginal: false }
-              )
-              .then(updatedDoc => updatedDoc.value);
+
+            return existingUser;
           } else if (existingUser.isConfirmed) {
             // A user exists with the same email and is confirmed, add Facebook ID to user
             debug('Adding Facebook ID to existing user with same confirmed email',
