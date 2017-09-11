@@ -15,6 +15,7 @@ import {
 } from '../../lib/trainingPlans';
 
 const debug = Debug('routes:auth:facebook');
+
 export const errors = {
   invalidCredentials: {
     message: 'Invalid credentials. Please try again.',
@@ -22,13 +23,13 @@ export const errors = {
   },
   unverifiedFacebook: {
     message: 'Please verify your account through Facebook before continuing.',
-    code: 403,
+    code: 400,
   },
   unconfirmedEmail: {
     message: 'Your email address is already registered with another account. ' +
-    'Please check your email to confirm your email address before connecting with your ' +
-    'Facebook account. Please contact support@gobackbone.com if you need assistance.',
-    code: 401,
+      'Please check your email to confirm your email address before connecting with your ' +
+      'Facebook account. Please contact support@gobackbone.com if you need assistance.',
+    code: 400,
   },
 };
 
