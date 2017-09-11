@@ -34,7 +34,7 @@ export default req => validate(req.body, {
         throw new Error('Invalid user');
       })
   ))
-  .then((user) => {
+  .then(user => (
     // Generate new tokens and send email
     tokenFactory.generateToken()
       .then(([confirmationToken, confirmationTokenExpiry]) => ({
@@ -46,17 +46,26 @@ export default req => validate(req.body, {
         emailUtility.sendConfirmationEmail(user.email, tokenResults.confirmationToken);
         return tokenResults;
       })
-      .then((tokenResults) => {
+      .then(tokenResults => (
         dbManager.getDb()
           .collection('users')
           .findOneAndUpdate(
             { _id: dbManager.mongodb.ObjectID(req.body._id) },
             { $set: tokenResults },
             { returnOriginal: false },
-          );
-      });
-  })
+          )))
+      )
+    )
   .then((user) => {
     debug('Email was resent');
-    return user;
+    if (!user.value) {
+      // User ID doesn't exist
+      throw new Error('Invalid user');
+    }
+
+    const updatedTokens = {};
+    updatedTokens.confirmationToken = user.value.confirmationToken;
+    updatedTokens.confirmationTokenExpiry = user.value.confirmationTokenExpiry;
+
+    return updatedTokens;
   });

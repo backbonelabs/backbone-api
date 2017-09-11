@@ -230,8 +230,7 @@ describe('/support router', () => {
           _id: userFixture._id,
         })
         .expect(200)
-        .expect((res) => {
-          expect(res.body).to.deep.equal({});
+        .expect(() => {
           expect(generateTokenStub.callCount).to.equal(1);
           expect(sendConfirmationEmailStub.callCount).to.equal(1);
           expect(sendConfirmationEmailStub.calledWith(testEmail)).to.be.true;
