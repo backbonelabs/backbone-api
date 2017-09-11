@@ -15,20 +15,56 @@ import constants from '../../lib/constants';
 const debug = Debug('routes:users:updateUsers');
 
 export const errors = {
-  invalidUserId: 'Invalid user id',
-  nonMatchingPasswords: 'Passwords must match',
-  disallowPasswordChange: 'Password change is not allowed',
-  incorrectPassword: 'Current password is incorrect',
-  invalidWorkout: 'Invalid workout',
-  unconfirmedEmail: 'An email was sent to your email address. ' +
-    'Please check your email to confirm your email address before connecting with Facebook.',
-  missingFacebookAccessToken: 'Missing Facebook access token.',
-  missingFacebookAppId: 'Missing Facebook application ID',
-  facebookTaken: 'Your Facebook account is registered with another account. ' +
-    'Please contact support@gobacbone.com if you need assistance.',
-  invalidCredentials: 'Invalid Facebook credentials.',
-  unverifiedFacebook: 'Please verify your Facebook account before continuing.',
-  emailTaken: 'Email is already taken.',
+  invalidUserId: {
+    message: 'Invalid user id',
+    code: 400,
+  },
+  nonMatchingPasswords: {
+    message: 'Passwords must match',
+    code: 400,
+  },
+  disallowPasswordChange: {
+    message: 'Password change is not allowed',
+    code: 400,
+  },
+  incorrectPassword: {
+    message: 'Current password is incorrect',
+    code: 400,
+  },
+  invalidWorkout: {
+    message: 'Invalid workout',
+    code: 400,
+  },
+  unconfirmedEmail: {
+    message: 'An email was sent to your email address. ' +
+      'Please check your email to confirm your email address before connecting with Facebook.',
+    code: 400,
+  },
+  missingFacebookAccessToken: {
+    message: 'Missing Facebook access token.',
+    code: 400,
+  },
+  missingFacebookAppId: {
+    message: 'Missing Facebook application ID',
+    code: 400,
+  },
+  facebookTaken: {
+    message: 'Your Facebook account is registered with another account. ' +
+      'Please contact support@gobacbone.com if you need assistance.',
+    code: 400,
+  },
+  invalidCredentials: {
+    message: 'Invalid Facebook credentials.',
+    code: 401,
+  },
+  unverifiedFacebook: {
+    message: 'Please verify your Facebook account before continuing.',
+    code: 400,
+  },
+  emailTaken: {
+    message: 'Email is already taken.',
+    code: 400,
+  },
 };
 
 /**
@@ -38,7 +74,7 @@ export const errors = {
  * @param  {Object} req.body      Key-value pairs of user attributes to update
  * @return {Promise} Resolves with the user object containing the updated attributes, sans password
  */
-export default (req) => {
+export default (req, res) => {
   const reqBody = Object.assign({}, req.body);
   const reqUserId = req.params.id;
 
@@ -74,7 +110,7 @@ export default (req) => {
             return user;
           }
           debug('Did not find user by id', reqUserId);
-          throw new Error(errors.invalidUserId);
+          throw new Error(errors.invalidUserId.message);
         })
     ))
     .then((user) => {
@@ -98,11 +134,11 @@ export default (req) => {
       if (pw || verifyPassword) {
         // Password is being changed, make sure password and verifyPassword are the same
         if (pw !== verifyPassword) {
-          throw new Error(errors.nonMatchingPasswords);
+          throw new Error(errors.nonMatchingPasswords.message);
         }
 
         if (user.authMethod !== constants.authMethods.EMAIL) {
-          throw new Error(errors.disallowPasswordChange);
+          throw new Error(errors.disallowPasswordChange.message);
         }
 
         return password.verify(currentPassword, user.password)
@@ -110,7 +146,7 @@ export default (req) => {
             // If password doesn't match
             if (!isPasswordMatch) {
               debug('Incorrect password');
-              throw new Error(errors.incorrectPassword);
+              throw new Error(errors.incorrectPassword.message);
             }
             // Hash password
             return password.hash(pw)
@@ -141,7 +177,7 @@ export default (req) => {
           );
 
           if (!isFavoriteWorkoutsValid) {
-            throw new Error(errors.invalidWorkout);
+            throw new Error(errors.invalidWorkout.message);
           }
           // Converts workout Id strings to Mongo objects
           Object.assign(updateFields, {
@@ -172,22 +208,22 @@ export default (req) => {
 
         if (!facebookAccessToken) {
           // Missing Facebook access token
-          throw new Error(errors.missingFacebookAccessToken);
+          throw new Error(errors.missingFacebookAccessToken.message);
         }
 
         if (!facebookAppId) {
           // Missing Facebook app ID
-          throw new Error(errors.missingFacebookAppId);
+          throw new Error(errors.missingFacebookAppId.message);
         }
 
         if (facebookAppId.toString() !== envFbAppId.toString()) {
           // Incorrect app ID
-          throw new Error(errors.invalidCredentials);
+          throw new Error(errors.invalidCredentials.message);
         }
 
         if (!facebookVerified) {
           // Facebook account is not verified
-          throw new Error(errors.unverifiedFacebook);
+          throw new Error(errors.unverifiedFacebook.message);
         }
 
         // Check if Facebook ID is already taken
@@ -200,7 +236,7 @@ export default (req) => {
             if (existingFbUser && existingFbUser._id.toHexString() !== reqUserId) {
               // Facebook ID is taken by another user
               debug('Facebook ID is registered to another user', updateFields.facebookId);
-              throw new Error(errors.facebookTaken);
+              throw new Error(errors.facebookTaken.message);
             }
           })
           .then(() => {
@@ -222,7 +258,7 @@ export default (req) => {
                   // Facebook error code for invalid user access token:
                   // { code: 190, message: 'Invalid OAuth access token.' }
                   if (result.data.error.code === 190) {
-                    throw new Error(errors.invalidCredentials);
+                    throw new Error(errors.invalidCredentials.message);
                   }
                   throw new Error(result.data.error.message);
                 }
@@ -237,11 +273,11 @@ export default (req) => {
                   // Token is valid so we continue to check app and user Id
                   if (debugTokenAppId.toString() !== envFbAppId.toString() ||
                       debugTokenUserId.toString() !== updateFields.facebookId.toString()) {
-                    throw new Error(errors.invalidCredentials);
+                    throw new Error(errors.invalidCredentials.message);
                   }
                 } else {
                   // Token is not valid
-                  throw new Error(errors.invalidCredentials);
+                  throw new Error(errors.invalidCredentials.message);
                 }
               });
           })
@@ -272,7 +308,7 @@ export default (req) => {
           .then((userWithEmail) => {
             if (userWithEmail) {
               debug(`Attempted to update email, but ${email} is already taken`);
-              throw new Error(errors.emailTaken);
+              throw new Error(errors.emailTaken.message);
             }
             // Email is available, generate an email confirmation token and send confirmation email
             return tokenFactory.generateToken()
@@ -307,5 +343,14 @@ export default (req) => {
         mapIdsToTrainingPlans(sanitizedUser.trainingPlans, sanitizedUser.trainingPlanProgress);
 
       return sanitizedUser;
+    })
+    .catch((err) => {
+      // Set the status code based on the error type
+      Object.keys(errors).forEach((errorName) => {
+        if (errors[errorName].message === err.message) {
+          res.status(errors[errorName].code);
+        }
+      });
+      throw err;
     });
 };

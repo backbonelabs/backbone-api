@@ -11,7 +11,7 @@ import constants from '../../lib/constants';
 import EmailUtility from '../../lib/EmailUtility';
 import tokenFactory from '../../lib/tokenFactory';
 import { getWorkouts } from '../../lib/trainingPlans';
-import { errors as fbErrors } from '../../routes/users/updateUser';
+import { errors } from '../../routes/users/updateUser';
 
 let emailUtility;
 let app;
@@ -579,7 +579,7 @@ describe('/users router', () => {
       assertRequest({ favoriteWorkouts: [randomString({ length: 24 })] })
         .expect(400)
         .expect((res) => {
-          expect(res.body.error).to.equal('Invalid workout');
+          expect(res.body.error).to.equal(errors.invalidWorkout.message);
         })
         .end(done);
     });
@@ -670,7 +670,7 @@ describe('/users router', () => {
       })
         .expect(400)
         .expect((res) => {
-          expect(res.body.error).to.equal(fbErrors.missingFacebookAccessToken);
+          expect(res.body.error).to.equal(errors.missingFacebookAccessToken.message);
         })
         .end(done);
     });
@@ -684,7 +684,7 @@ describe('/users router', () => {
       })
         .expect(400)
         .expect((res) => {
-          expect(res.body.error).to.equal(fbErrors.missingFacebookAppId);
+          expect(res.body.error).to.equal(errors.missingFacebookAppId.message);
         })
         .end(done);
     });
@@ -698,7 +698,7 @@ describe('/users router', () => {
       })
         .expect(400)
         .expect((res) => {
-          expect(res.body.error).to.equal(fbErrors.unverifiedFacebook);
+          expect(res.body.error).to.equal(errors.unverifiedFacebook.message);
         })
         .end(done);
     });
@@ -713,7 +713,7 @@ describe('/users router', () => {
       })
         .expect(400)
         .expect((res) => {
-          expect(res.body.error).to.equal(fbErrors.facebookTaken);
+          expect(res.body.error).to.equal(errors.facebookTaken.message);
         })
         .end(done);
     });
