@@ -1,39 +1,33 @@
 import Debug from 'debug';
-import validate from '../../lib/validate';
-import schemas from '../../lib/schemas';
 import dbManager from '../../lib/dbManager';
 import tokenFactory from '../../lib/tokenFactory';
 import EmailUtility from '../../lib/EmailUtility';
 
-const debug = Debug('routes:support:resendEmail');
+const debug = Debug('routes:users:resendEmail');
 
 /**
  * Resends comfirmation email and sets new comfirmation tokens
- * @param  {Object} req              Request
- * @param  {Object} req.body         Request body
- * @param  {String} req.body._id     User id
- * @param  {String} req.body.message Support ticket message
+ * @param  {Object} req           Request
+ * @param  {Object} req.params    Request parameters
+ * @param  {String} req.params.id User ID
  * @return {Promise} Resolves with a user object
  */
-export default req => validate(req.body, {
-  _id: schemas.user._id,
-}, ['_id'])
-  .then(() => (
-    // Verify user
-    dbManager.getDb()
-      .collection('users')
-      .find({ _id: dbManager.mongodb.ObjectId(req.body._id) })
-      .limit(1)
-      .next()
-      .then((user) => {
-        if (user) {
-          debug('Found user by id', user);
-          return user;
-        }
-        debug('Did not find user by id', req.body._id);
-        throw new Error('Invalid user');
-      })
-  ))
+export default (req) => {
+  const id = req.params.id;
+  // Verify user
+  return dbManager.getDb()
+    .collection('users')
+    .find({ _id: dbManager.mongodb.ObjectId(id) })
+    .limit(1)
+    .next()
+    .then((user) => {
+      if (user) {
+        debug('Found user by id', user);
+        return user;
+      }
+      debug('Did not find user by id', id);
+      throw new Error('Invalid user');
+    })
   .then(user => (
     // Generate new tokens and send email
     tokenFactory.generateToken()
@@ -50,7 +44,7 @@ export default req => validate(req.body, {
         dbManager.getDb()
           .collection('users')
           .findOneAndUpdate(
-            { _id: dbManager.mongodb.ObjectID(req.body._id) },
+            { _id: dbManager.mongodb.ObjectID(id) },
             { $set: tokenResults },
             { returnOriginal: false },
           )))
@@ -69,3 +63,4 @@ export default req => validate(req.body, {
 
     return updatedTokens;
   });
+};

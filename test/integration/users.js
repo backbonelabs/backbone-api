@@ -349,6 +349,10 @@ describe('/users router', () => {
         .spy(tokenFactory, 'generateToken');
     });
 
+    after(() => {
+      tokenFactory.generateToken.restore();
+    });
+
     it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
         .post(url)
@@ -776,6 +780,55 @@ describe('/users router', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body).to.be.instanceOf(Array);
+        })
+        .end(done);
+    });
+  });
+
+  describe('GET /send-confirmation-email/:id', () => {
+    const url = '/users/send-confirmation-email';
+    let generateTokenStub;
+    let sendConfirmationEmailStub;
+
+    before(() => {
+      emailUtility = EmailUtility.init({
+        apiKey: process.env.BL_MAILGUN_API,
+        domain: process.env.BL_MAILGUN_DOMAIN,
+        silentEmail: false,
+      });
+      sendConfirmationEmailStub = sinon.stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
+      generateTokenStub = sinon.spy(tokenFactory, 'generateToken');
+    });
+
+    after(() => {
+      tokenFactory.generateToken.restore();
+    });
+
+    it('should respond with 401 on missing authorization credentials', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .send({})
+        .expect(401)
+        .end(done);
+    });
+
+    it('should respond with a 401 if access token does not belong to the user id', (done) => {
+      request(app)
+        .get(`${url}/abcdef123456abcdef123456`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(401)
+        .expect({ error: 'Invalid credentials' })
+        .end(done);
+    });
+
+    it('should send confirmation email', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(200)
+        .expect(() => {
+          expect(generateTokenStub.callCount).to.equal(1);
+          expect(sendConfirmationEmailStub.callCount).to.equal(1);
         })
         .end(done);
     });
