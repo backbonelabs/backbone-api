@@ -17,40 +17,40 @@ const testEmail = `test.${randomString()}@${randomString()}.com`;
 const testAccessToken = 'testAccessToken';
 const userIdsToDelete = [];
 
-before(() => (
-  Promise.resolve(server)
-    .then((expressApp) => {
-      app = expressApp;
-    })
-    .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-    .then((mDb) => {
-      db = mDb;
-    })
-    .then(() => (
-      db.collection('users')
-        .insertOne(mergeWithDefaultData({
-          email: testEmail,
-        }))
-    ))
-    .then((result) => {
-      const { ops } = result;
-      userFixture = ops[0];
-
-      userFixture._id = userFixture._id.toHexString();
-      userIdsToDelete.push(userFixture._id);
-    })
-    .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
-));
-
-after(() => (
-  db.collection('accessTokens')
-    .deleteOne({ accessToken: testAccessToken })
-    .then(() => db.collection('users').deleteOne({
-      _id: mongodb.ObjectID(userFixture._id),
-    }))
-));
-
 describe('/support router', () => {
+  before(() => (
+    Promise.resolve(server)
+      .then((expressApp) => {
+        app = expressApp;
+      })
+      .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+      .then((mDb) => {
+        db = mDb;
+      })
+      .then(() => (
+        db.collection('users')
+          .insertOne(mergeWithDefaultData({
+            email: testEmail,
+          }))
+      ))
+      .then((result) => {
+        const { ops } = result;
+        userFixture = ops[0];
+
+        userFixture._id = userFixture._id.toHexString();
+        userIdsToDelete.push(userFixture._id);
+      })
+      .then(() => db.collection('accessTokens').insertOne({ accessToken: testAccessToken }))
+  ));
+
+  after(() => (
+    db.collection('accessTokens')
+      .deleteOne({ accessToken: testAccessToken })
+      .then(() => db.collection('users').deleteOne({
+        _id: mongodb.ObjectID(userFixture._id),
+      }))
+  ));
+
   let sendSupportEmailStub;
 
   beforeEach(() => {

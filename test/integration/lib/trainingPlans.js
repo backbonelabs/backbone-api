@@ -101,56 +101,56 @@ const testTrainingPlans = [{
   ],
 }];
 
-before(() => (
-  dbManager.init({ url: process.env.BL_DATABASE_URL })
-    .then((mDb) => {
-      db = mDb;
-    })
-    .then(() => (
-      // Insert test workouts
-      db.collection('workouts')
-        .insertMany(testWorkouts)
-    ))
-    .then(() => {
-      // Reference the test workout IDs in the test training plan sessions.
-      // The .insertMany call will mutate testWorkouts to add _id to each workout
-      testTrainingPlans.forEach((trainingPlan) => {
-        trainingPlan.levels.forEach((level) => {
-          level.forEach((session, idx) => {
-            session.forEach((sessionItem) => {
-              sessionItem.workout = testWorkouts[idx]._id;
+describe('trainingPlans module integration tests', () => {
+  before(() => (
+    dbManager.init({ url: process.env.BL_DATABASE_URL })
+      .then((mDb) => {
+        db = mDb;
+      })
+      .then(() => (
+        // Insert test workouts
+        db.collection('workouts')
+          .insertMany(testWorkouts)
+      ))
+      .then(() => {
+        // Reference the test workout IDs in the test training plan sessions.
+        // The .insertMany call will mutate testWorkouts to add _id to each workout
+        testTrainingPlans.forEach((trainingPlan) => {
+          trainingPlan.levels.forEach((level) => {
+            level.forEach((session, idx) => {
+              session.forEach((sessionItem) => {
+                sessionItem.workout = testWorkouts[idx]._id;
+              });
             });
           });
         });
-      });
-    })
-    .then(() => (
-      // Insert test training plans
-      db.collection('trainingPlans')
-        .insertMany(testTrainingPlans)
-    ))
-));
+      })
+      .then(() => (
+        // Insert test training plans
+        db.collection('trainingPlans')
+          .insertMany(testTrainingPlans)
+      ))
+  ));
 
-after(() => (
-  // Delete test training plans
-  db.collection('trainingPlans')
-    .deleteMany({
-      _id: {
-        $in: testTrainingPlans.map(trainingPlan => trainingPlan._id),
-      },
-    })
-    .then(() => (
-      // Delete test workouts
-      db.collection('workouts')
-        .deleteMany({
-          _id: {
-            $in: testWorkouts.map(workout => workout._id),
-          },
-        })
-    ))
-));
+  after(() => (
+    // Delete test training plans
+    db.collection('trainingPlans')
+      .deleteMany({
+        _id: {
+          $in: testTrainingPlans.map(trainingPlan => trainingPlan._id),
+        },
+      })
+      .then(() => (
+        // Delete test workouts
+        db.collection('workouts')
+          .deleteMany({
+            _id: {
+              $in: testWorkouts.map(workout => workout._id),
+            },
+          })
+      ))
+  ));
 
-describe('trainingPlans module integration tests', () => {
   describe('getTrainingPlans', () => {
     it('should be a function', () => {
       expect(getTrainingPlans).to.be.a('function');
