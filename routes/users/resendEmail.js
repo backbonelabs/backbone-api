@@ -10,7 +10,7 @@ const debug = Debug('routes:users:resendEmail');
  * @param  {Object} req           Request
  * @param  {Object} req.params    Request parameters
  * @param  {String} req.params.id User ID
- * @return {Promise} Resolves with a user object
+ * @return {Promise} Resolves with an object that contains the token and token expiry.
  */
 export default (req) => {
   const id = req.params.id;
@@ -22,7 +22,7 @@ export default (req) => {
     .next()
     .then((user) => {
       if (user) {
-        debug('Found user by id', user);
+        debug('Found user by id', id);
         return user;
       }
       debug('Did not find user by id', id);
