@@ -718,7 +718,7 @@ describe('/users router', () => {
         .end(done);
     });
 
-    it('should accept Facebook ID for an unconfirmed user', (done) => {
+    it('should reject Facebook ID for an unconfirmed user', (done) => {
       expect(userFixture2.isConfirmed).to.be.false;
       const facebookId = fbTestUsers[1].id;
       request(app)
@@ -730,12 +730,9 @@ describe('/users router', () => {
           facebookAppId: fbAppId,
           facebookVerified: true,
         })
-        .expect(200)
+        .expect(errors.unconfirmedEmail.code)
         .expect((res) => {
-          const { body } = res;
-          expect(body._id).to.equal(userFixture2._id);
-          expect(body.facebookId).to.equal(facebookId);
-          expect(body.isConfirmed).to.be.false;
+          expect(res.body.error).to.equal(errors.unconfirmedEmail.message);
         })
         .end(done);
     });

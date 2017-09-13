@@ -283,12 +283,35 @@ export default (req, res) => {
           })
           .then(() => {
             // Facebook ID is valid
-            if (!user.isConfirmed && facebookEmail && user.email &&
-              user.email.toLowerCase() === facebookEmail.toLowerCase()) {
-              // User's current email is the same as the Facebook email and user's email is
-              // not yet confirmed. Since the Facebook email is already verified at this point,
-              // mark the user as confirmed.
-              updateFields.isConfirmed = true;
+            if (!user.isConfirmed) {
+              // User does not have a confirmed email address
+              if (facebookEmail && user.email &&
+                user.email.toLowerCase() === facebookEmail.toLowerCase()) {
+                // User's current email is the same as their Facebook email. Since the Facebook
+                // email is already verified at this point, mark the user as confirmed.
+                updateFields.isConfirmed = true;
+              } else {
+                // The user's current email is not the same as the incoming Facebook email.
+                // We should not add the Facebook account until the user confirms their email.
+                return tokenFactory.generateToken()
+                  .then(([confirmationToken, confirmationTokenExpiry]) => (
+                    dbManager.getDb()
+                      .collection('users')
+                      .findOneAndUpdate(
+                        { _id: user._id },
+                        { $set: { confirmationToken, confirmationTokenExpiry } }
+                      )
+                      .then(() => {
+                        // Send user confirmation email
+                        const emailUtility = EmailUtility.getMailer();
+                        return emailUtility
+                          .sendConfirmationEmail(user.email, confirmationToken);
+                      })
+                      .then(() => {
+                        throw new Error(errors.unconfirmedEmail.message);
+                      })
+                  ));
+              }
             }
             return [user, updateFields];
           });
