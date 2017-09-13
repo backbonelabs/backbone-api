@@ -326,7 +326,7 @@ describe('/users router', () => {
   describe('POST /:id', () => {
     let url;
     let sendConfirmationEmailStub;
-    let generateTokenStub;
+    let generateTokenSpy;
 
     beforeEach(() => {
       emailUtility = EmailUtility.init({
@@ -345,12 +345,12 @@ describe('/users router', () => {
 
     before(() => {
       url = `/users/${userFixture1._id}`;
-      generateTokenStub = sinon
+      generateTokenSpy = sinon
         .spy(tokenFactory, 'generateToken');
     });
 
     after(() => {
-      tokenFactory.generateToken.restore();
+      generateTokenSpy.restore();
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
@@ -417,7 +417,7 @@ describe('/users router', () => {
           expect(body.email).to.equal(newEmail);
           expect(body.password).to.not.exist;
           expect(sendConfirmationEmailStub.callCount).to.equal(1);
-          expect(generateTokenStub.callCount).to.equal(1);
+          expect(generateTokenSpy.callCount).to.equal(1);
           userFixture1.email = newEmail;
         })
         .end(done);
@@ -785,9 +785,9 @@ describe('/users router', () => {
     });
   });
 
-  describe('GET /send-confirmation-email/:id', () => {
+  describe('POST /send-confirmation-email/:id', () => {
     const url = '/users/send-confirmation-email';
-    let generateTokenStub;
+    let generateTokenSpy;
     let sendConfirmationEmailStub;
 
     before(() => {
@@ -797,16 +797,16 @@ describe('/users router', () => {
         silentEmail: false,
       });
       sendConfirmationEmailStub = sinon.stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
-      generateTokenStub = sinon.spy(tokenFactory, 'generateToken');
+      generateTokenSpy = sinon.spy(tokenFactory, 'generateToken');
     });
 
     after(() => {
-      tokenFactory.generateToken.restore();
+      generateTokenSpy.restore();
     });
 
     it('should respond with 401 on missing authorization credentials', (done) => {
       request(app)
-        .get(`${url}/${userFixture1._id}`)
+        .post(`${url}/${userFixture1._id}`)
         .send({})
         .expect(401)
         .end(done);
@@ -814,7 +814,7 @@ describe('/users router', () => {
 
     it('should respond with a 401 if access token does not belong to the user id', (done) => {
       request(app)
-        .get(`${url}/abcdef123456abcdef123456`)
+        .post(`${url}/abcdef123456abcdef123456`)
         .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(401)
         .expect({ error: 'Invalid credentials' })
@@ -823,11 +823,11 @@ describe('/users router', () => {
 
     it('should send confirmation email', (done) => {
       request(app)
-        .get(`${url}/${userFixture1._id}`)
+        .post(`${url}/${userFixture1._id}`)
         .set('Authorization', `Bearer ${testAccessToken1}`)
         .expect(200)
         .expect(() => {
-          expect(generateTokenStub.callCount).to.equal(1);
+          expect(generateTokenSpy.callCount).to.equal(1);
           expect(sendConfirmationEmailStub.callCount).to.equal(1);
         })
         .end(done);
