@@ -2,6 +2,8 @@ import Debug from 'debug';
 import express from 'express';
 import bugsnag from 'bugsnag';
 import bodyParser from 'body-parser';
+import isInteger from 'lodash/isInteger';
+import toNumber from 'lodash/toNumber';
 import dbManager from './lib/dbManager';
 import { getTrainingPlans, getWorkouts } from './lib/trainingPlans';
 import adminRouter from './routes/admin';
@@ -53,14 +55,22 @@ export default dbManager.init({
   .then(getWorkouts) // Fetch and store workouts
   .then(getTrainingPlans) // Fetch and store training plans
   .then(() => {
-    // Cheap version of an expiring cache for retrieving the
-    // latest training plan and workout data every 10 minutes
+    // Cheap version of a cache for retrieving the latest training plan and workout data
+    let cacheDuration = toNumber(process.env.BL_WORKOUT_CACHE_DURATION);
+    if (isInteger(cacheDuration) && cacheDuration > 0) {
+      // Convert to milliseconds
+      cacheDuration *= 1000;
+    } else {
+      // Cache duration is not properly defined in environment variables.
+      // Set to a default of 5 minutes.
+      cacheDuration = 1000 * 60 * 5;
+    }
     setInterval(() => {
       getWorkouts(true)
         .then(() => {
           getTrainingPlans(true);
         });
-    }, 1000 * 60 * 10);
+    }, cacheDuration);
 
     // Register route handlers
     app.use('/admin', adminRouter);
