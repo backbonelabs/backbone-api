@@ -577,7 +577,7 @@ describe('/users router', () => {
 
     it('should reject invalid favorite workout Ids', (done) => {
       assertRequest({ favoriteWorkouts: [randomString({ length: 24 })] })
-        .expect(400)
+        .expect(errors.invalidWorkout.code)
         .expect((res) => {
           expect(res.body.error).to.equal(errors.invalidWorkout.message);
         })
@@ -668,7 +668,7 @@ describe('/users router', () => {
         facebookAppId: fbAppId,
         facebookVerified: true,
       })
-        .expect(400)
+        .expect(errors.missingFacebookAccessToken.code)
         .expect((res) => {
           expect(res.body.error).to.equal(errors.missingFacebookAccessToken.message);
         })
@@ -682,7 +682,7 @@ describe('/users router', () => {
         facebookAccessToken: fbTestUsers[1].access_token,
         facebookVerified: true,
       })
-        .expect(400)
+        .expect(errors.missingFacebookAppId.code)
         .expect((res) => {
           expect(res.body.error).to.equal(errors.missingFacebookAppId.message);
         })
@@ -696,7 +696,7 @@ describe('/users router', () => {
         facebookAccessToken: fbTestUsers[1].access_token,
         facebookAppId: fbAppId,
       })
-        .expect(400)
+        .expect(errors.unverifiedFacebook.code)
         .expect((res) => {
           expect(res.body.error).to.equal(errors.unverifiedFacebook.message);
         })
@@ -711,7 +711,7 @@ describe('/users router', () => {
         facebookAppId: fbAppId,
         facebookVerified: true,
       })
-        .expect(400)
+        .expect(errors.facebookTaken.code)
         .expect((res) => {
           expect(res.body.error).to.equal(errors.facebookTaken.message);
         })
