@@ -50,7 +50,7 @@ export const errors = {
   },
   facebookTaken: {
     message: 'Your Facebook account is registered with another account. ' +
-      'Please contact support@gobacbone.com if you need assistance.',
+      'Please contact support@gobackbone.com if you need assistance.',
     code: 400,
   },
   invalidCredentials: {
