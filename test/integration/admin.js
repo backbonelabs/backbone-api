@@ -42,7 +42,7 @@ before(() => (
     ))
     .then(() => (
       db.collection('users')
-        .insertMany(generateUsers(2))
+        .insertMany(generateUsers(10))
     ))
     .then((results) => {
       const { ops } = results;
@@ -89,11 +89,12 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(2);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(userFixtures.length);
+          expect(count).to.be.at.least(userFixtures.length);
           const userFixtureIds = userFixtures.map(userFixture => userFixture._id);
-          const responseUserIds = body.map(user => user._id);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include.members(userFixtureIds);
         })
         .end(done);
@@ -106,10 +107,11 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(1);
-          const responseUserIds = body.map(user => user._id);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(userFixtures.length);
+          expect(count).to.be.at.least(1).at.most(userFixtures.length);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include(userFixtures[0]._id);
         })
         .end(done);
@@ -122,10 +124,11 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(1);
-          const responseUserIds = body.map(user => user._id);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(userFixtures.length);
+          expect(count).to.be.at.least(1).at.most(userFixtures.length);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include(userFixtures[1]._id);
         })
         .end(done);
