@@ -53,16 +53,20 @@ export default req => validate(req.query, {
       cursor.skip((page - 1) * limit);
     }
 
-    return cursor
-      .toArray()
-      .then(users => (
-        users
+    return Promise.all([cursor.toArray(), cursor.count()])
+      .then(([userDocs, count]) => {
+        const users = userDocs
           // Remove password from all users
           .map(sanitizeUser)
           // Add training plan details
           .map(user => ({
             ...user,
             trainingPlans: mapIdsToTrainingPlans(user.trainingPlans, user.trainingPlanProgress),
-          }))
-      ));
+          }));
+
+        return {
+          users,
+          count,
+        };
+      });
   });
