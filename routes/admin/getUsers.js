@@ -55,6 +55,9 @@ export default req => validate(req.query, {
 
     return Promise.all([cursor.toArray(), cursor.count()])
       .then(([userDocs, count]) => {
+        // cursor.count() returns the total number of documents that match the search query
+        // but doesn't take in the effects of .limit() or .skip() applied to the cursor.
+
         const users = userDocs
           // Remove password from all users
           .map(sanitizeUser)
