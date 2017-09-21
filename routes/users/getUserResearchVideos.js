@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import dbManager from '../../lib/dbManager';
 
-const debug = Debug('routes:users:getResearchVideos');
+const debug = Debug('routes:users:researchVideos');
 
 export default () => {
   debug('Fetching research videos from database');
