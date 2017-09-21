@@ -995,17 +995,17 @@ describe('/users router', function describeUsers() {
     });
   });
 
-  // describe('GET /getResearchVideos/:id', () => {
-  //   const url = '/users/researchVidoes';
-  //   it('should return an array of research videos', (done) => {
-  //     request(app)
-  //       .get(`${url}/${userFixture1._id}`)
-  //       .set('Authorization', `Bearer ${testAccessToken1}`)
-  //       .expect(200)
-  //       .expect((res) => {
-  //         expect(res.body).to.be.instanceOf(Array);
-  //       })
-  //       .end(done);
-  //   });
-  // });
+  describe('GET /researchVideos/:id', () => {
+    const url = '/users/researchVideos';
+    it('should return an array of research videos', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.be.instanceOf(Array);
+        })
+        .end(done);
+    });
+  });
 });
