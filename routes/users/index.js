@@ -19,6 +19,6 @@ router.post('/:id', requireSelfAuth, handleRoute(updateUser));
 router.post('/settings/:id', requireSelfAuth, handleRoute(updateUserSettings));
 router.get('/workouts/:id', requireSelfAuth, handleRoute(getUserWorkouts));
 router.post('/send-confirmation-email/:id', requireSelfAuth, handleRoute(resendEmail));
-router.get('/researchVideos/:id', requireSelfAuth, handleRoute(getUserResearchVideos));
+router.get('/research-videos/:id', requireSelfAuth, handleRoute(getUserResearchVideos));
 
 export default router;

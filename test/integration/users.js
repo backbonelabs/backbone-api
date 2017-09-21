@@ -995,8 +995,8 @@ describe('/users router', function describeUsers() {
     });
   });
 
-  describe('GET /researchVideos/:id', () => {
-    const url = '/users/researchVideos';
+  describe('GET /research-videos/:id', () => {
+    const url = '/users/research-videos';
     it('should return an array of research videos', (done) => {
       request(app)
         .get(`${url}/${userFixture1._id}`)
