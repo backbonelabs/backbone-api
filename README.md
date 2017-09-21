@@ -29,5 +29,8 @@ By default, emails will not be sent in development mode. To have emails be sent,
 Production releases should be triggered from the `production` branch. Therefore, `master` could be ahead of `production` because we may merge in new changes but delibrately hold off on releasing until a later time. Using a separate branch for releases will allow us to further test and perform QA before releasing to the wild.
 
 1. Make sure you have the Elastic Beanstalk CLI installed and configured. See http://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3.html.
-2. Checkout to the `production` branch and merge in the latest `master`
-3. Run `eb deploy`
+2. Set the backbone-api-staging environment as the default environment in the EB CLI to prevent accidental deployments to production.
+3. Checkout to the `production` branch and merge in the latest `master`.
+4. Deploy to staging first by running `eb deploy backbone-api-staging`.
+5. After it is deployed to staging, check the status of the staging environment in the AWS Elastic Beanstalk console to make sure there are no issues.
+6. Deploy to the production environment by going to the backbone-api application in the Elastic Beanstalk console and clicking on the "Application versions" link on the left-hand side and then selecting the latest version to deploy to the backbone-api-prod environment.

@@ -24,6 +24,7 @@ const generateUsers = (n, collection = []) => {
 
 const userFixtures = [];
 const testAccessToken = randomString({ length: 64 });
+let totalUsers = 0;
 
 before(() => (
   Promise.resolve(server)
@@ -42,7 +43,7 @@ before(() => (
     ))
     .then(() => (
       db.collection('users')
-        .insertMany(generateUsers(2))
+        .insertMany(generateUsers(10))
     ))
     .then((results) => {
       const { ops } = results;
@@ -50,6 +51,10 @@ before(() => (
       userFixtures.forEach((user) => {
         user._id = user._id.toHexString();
       });
+    })
+    .then(() => db.collection('users').find().toArray())
+    .then((results) => {
+      totalUsers = results.length;
     })
 ));
 
@@ -89,12 +94,109 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(2);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(userFixtures.length);
+          expect(count).to.be.at.least(userFixtures.length);
           const userFixtureIds = userFixtures.map(userFixture => userFixture._id);
-          const responseUserIds = body.map(user => user._id);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include.members(userFixtureIds);
+        })
+        .end(done);
+    });
+
+    it('should reject invalid limit parameter values', () => {
+      const invalidRequestWithLimit = limit => (
+        new Promise((resolve, reject) => {
+          request(app)
+            .get(url)
+            .query({ limit })
+            .set('Authorization', `Bearer ${testAccessToken}`)
+            .expect(400, (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
+        })
+      );
+
+      return Promise.all([
+        invalidRequestWithLimit(0),
+        invalidRequestWithLimit(-1),
+        invalidRequestWithLimit(1.01),
+      ]);
+    });
+
+    it('should return max users based on the limit parameter', (done) => {
+      const limit = userFixtures.length / 2;
+      request(app)
+        .get(url)
+        .query({ limit })
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(200)
+        .expect((res) => {
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(limit);
+          expect(count).to.be.at.least(userFixtures.length);
+        })
+        .end(done);
+    });
+
+    it('should reject invalid page parameter values', () => {
+      const invalidRequestWithPage = page => (
+        new Promise((resolve, reject) => {
+          request(app)
+            .get(url)
+            .query({ page })
+            .set('Authorization', `Bearer ${testAccessToken}`)
+            .expect(400, (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
+        })
+      );
+
+      return Promise.all([
+        invalidRequestWithPage(0),
+        invalidRequestWithPage(-1),
+        invalidRequestWithPage(1.01),
+      ]);
+    });
+
+    it('should return max users based on the limit and page parameter', (done) => {
+      const limit = userFixtures.length / 2;
+      request(app)
+        .get(url)
+        .query({ limit, page: 2 })
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(200)
+        .expect((res) => {
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(limit);
+          expect(count).to.be.at.least(userFixtures.length);
+        })
+        .end(done);
+    });
+
+    it('should return no users if the starting page doesn\'t exist', (done) => {
+      const limit = userFixtures.length / 2;
+      request(app)
+        .get(url)
+        .query({ limit, page: Math.floor(totalUsers / limit) + 2 })
+        .set('Authorization', `Bearer ${testAccessToken}`)
+        .expect(200)
+        .expect((res) => {
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.lengthOf(0);
+          expect(count).to.be.at.least(userFixtures.length);
         })
         .end(done);
     });
@@ -106,10 +208,11 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(1);
-          const responseUserIds = body.map(user => user._id);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(userFixtures.length);
+          expect(count).to.be.at.least(1).at.most(userFixtures.length);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include(userFixtures[0]._id);
         })
         .end(done);
@@ -122,10 +225,11 @@ describe('/admin router', () => {
         .set('Authorization', `Bearer ${testAccessToken}`)
         .expect(200)
         .expect((res) => {
-          const { body } = res;
-          expect(body).to.be.an('array');
-          expect(body).to.have.length.at.least(1);
-          const responseUserIds = body.map(user => user._id);
+          const { body: { users, count } } = res;
+          expect(users).to.be.an('array');
+          expect(users).to.have.length.at.least(1).at.most(userFixtures.length);
+          expect(count).to.be.at.least(1).at.most(userFixtures.length);
+          const responseUserIds = users.map(user => user._id);
           expect(responseUserIds).to.include(userFixtures[1]._id);
         })
         .end(done);

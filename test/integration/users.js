@@ -58,127 +58,131 @@ const testWorkouts = [{
 }];
 const fbAppId = process.env.FB_APP_ID;
 
-describe('/users router', () => {
-  before(() => (
-    Promise.resolve(server)
-      .then((expressApp) => {
-        app = expressApp;
-      })
-      .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-      .then((mDb) => {
-        db = mDb;
-      })
-      .then(() => (
-        // Insert test workouts
-        db.collection('workouts')
-          .insertMany(testWorkouts)
-      ))
-      .then(() => {
-        const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
+describe('/users router', function describeUsers() {
+  const mochaContext = this;
+  before(() => {
+    mochaContext.timeout(15000);
+    return (
+      Promise.resolve(server)
+        .then((expressApp) => {
+          app = expressApp;
+        })
+        .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+        .then((mDb) => {
+          db = mDb;
+        })
+        .then(() => (
+          // Insert test workouts
+          db.collection('workouts')
+            .insertMany(testWorkouts)
+        ))
+        .then(() => {
+          const defaultTrainingPlanNames = process.env.BL_DEFAULT_TRAINING_PLAN_NAMES.split(/,\s*/);
 
-        return db.collection('trainingPlans')
-          .find({ name: { $in: defaultTrainingPlanNames } })
-          .toArray()
-          .then((trainingPlans) => {
-            defaultTrainingPlans = trainingPlans;
-          });
-      })
-      .then(() => {
-        // Retrieve Facebook test users
-        const options = {
-          method: 'GET',
-          uri: `https://graph.facebook.com/v2.10/${process.env.FB_APP_ID}/accounts/test-users/`,
-          qs: {
-            fields: 'access_token',
-            access_token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`,
-          },
-          json: true,
-        };
+          return db.collection('trainingPlans')
+            .find({ name: { $in: defaultTrainingPlanNames } })
+            .toArray()
+            .then((trainingPlans) => {
+              defaultTrainingPlans = trainingPlans;
+            });
+        })
+        .then(() => {
+          // Retrieve Facebook test users
+          const options = {
+            method: 'GET',
+            uri: `https://graph.facebook.com/v2.10/${process.env.FB_APP_ID}/accounts/test-users/`,
+            qs: {
+              fields: 'access_token',
+              access_token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`,
+            },
+            json: true,
+          };
 
-        return requestPromise(options)
-          .then((body) => {
-            fbTestUsers = body.data;
-          });
-      })
-      .then(() => (
-        db.collection('users')
-        .insertMany([
-          mergeWithDefaultData({
-            email: testEmail1,
-            password: testPasswordHash,
-          }),
-          mergeWithDefaultData({
-            email: testEmail2,
-            password: testPasswordHash,
-          }),
-          mergeWithDefaultData({
-            email: testEmail3,
-            password: testPasswordHash,
-            isConfirmed: true,
-          }),
-          mergeWithDefaultData({
-            email: testEmail4,
-            password: testPasswordHash,
-          }),
-          mergeWithDefaultData({
-            email: testEmail5,
-            isConfirmed: true,
-            authMethod: constants.authMethods.FACEBOOK,
-            facebookId: fbTestUsers[0].id,
-          }),
-          mergeWithDefaultData({
-            email: null,
-            authMethod: constants.authMethods.FACEBOOK,
-          }),
-        ])
-      ))
-      .then((results) => {
-        const { ops } = results;
-        userFixture1 = ops[0];
-        userFixture2 = ops[1];
-        userFixture3 = ops[2];
-        userFixture4 = ops[3];
-        fbUserFixture1 = ops[4];
-        fbUserFixture2 = ops[5];
-        userFixture1._id = userFixture1._id.toHexString();
-        userFixture2._id = userFixture2._id.toHexString();
-        userFixture3._id = userFixture3._id.toHexString();
-        userFixture4._id = userFixture4._id.toHexString();
-        fbUserFixture1._id = fbUserFixture1._id.toHexString();
-        fbUserFixture2._id = fbUserFixture2._id.toHexString();
+          return requestPromise(options)
+            .then((body) => {
+              fbTestUsers = body.data;
+            });
+        })
+        .then(() => (
+          db.collection('users')
+          .insertMany([
+            mergeWithDefaultData({
+              email: testEmail1,
+              password: testPasswordHash,
+            }),
+            mergeWithDefaultData({
+              email: testEmail2,
+              password: testPasswordHash,
+            }),
+            mergeWithDefaultData({
+              email: testEmail3,
+              password: testPasswordHash,
+              isConfirmed: true,
+            }),
+            mergeWithDefaultData({
+              email: testEmail4,
+              password: testPasswordHash,
+            }),
+            mergeWithDefaultData({
+              email: testEmail5,
+              isConfirmed: true,
+              authMethod: constants.authMethods.FACEBOOK,
+              facebookId: fbTestUsers[0].id,
+            }),
+            mergeWithDefaultData({
+              email: null,
+              authMethod: constants.authMethods.FACEBOOK,
+            }),
+          ])
+        ))
+        .then((results) => {
+          const { ops } = results;
+          userFixture1 = ops[0];
+          userFixture2 = ops[1];
+          userFixture3 = ops[2];
+          userFixture4 = ops[3];
+          fbUserFixture1 = ops[4];
+          fbUserFixture2 = ops[5];
+          userFixture1._id = userFixture1._id.toHexString();
+          userFixture2._id = userFixture2._id.toHexString();
+          userFixture3._id = userFixture3._id.toHexString();
+          userFixture4._id = userFixture4._id.toHexString();
+          fbUserFixture1._id = fbUserFixture1._id.toHexString();
+          fbUserFixture2._id = fbUserFixture2._id.toHexString();
 
-        userIdsToDelete.push(
-          userFixture1._id,
-          userFixture2._id,
-          userFixture3._id,
-          userFixture4._id,
-          fbUserFixture1._id,
-          fbUserFixture2._id,
-        );
-      })
-      .then(() => (
-        db.collection('accessTokens')
-          .insertMany([{
-            userId: mongodb.ObjectID(userFixture1._id),
-            accessToken: testAccessToken1,
-          }, {
-            userId: mongodb.ObjectID(userFixture2._id),
-            accessToken: testAccessToken2,
-          }, {
-            userId: mongodb.ObjectID(userFixture3._id),
-            accessToken: testAccessToken3,
-          }, {
-            userId: mongodb.ObjectID(userFixture4._id),
-            accessToken: testAccessToken4,
-          }, {
-            userId: mongodb.ObjectID(fbUserFixture1._id),
-            accessToken: testAccessToken5,
-          }, {
-            userId: mongodb.ObjectID(fbUserFixture2._id),
-            accessToken: testAccessToken6,
-          }])
-      ))
-  ));
+          userIdsToDelete.push(
+            userFixture1._id,
+            userFixture2._id,
+            userFixture3._id,
+            userFixture4._id,
+            fbUserFixture1._id,
+            fbUserFixture2._id,
+          );
+        })
+        .then(() => (
+          db.collection('accessTokens')
+            .insertMany([{
+              userId: mongodb.ObjectID(userFixture1._id),
+              accessToken: testAccessToken1,
+            }, {
+              userId: mongodb.ObjectID(userFixture2._id),
+              accessToken: testAccessToken2,
+            }, {
+              userId: mongodb.ObjectID(userFixture3._id),
+              accessToken: testAccessToken3,
+            }, {
+              userId: mongodb.ObjectID(userFixture4._id),
+              accessToken: testAccessToken4,
+            }, {
+              userId: mongodb.ObjectID(fbUserFixture1._id),
+              accessToken: testAccessToken5,
+            }, {
+              userId: mongodb.ObjectID(fbUserFixture2._id),
+              accessToken: testAccessToken6,
+            }])
+        ))
+    );
+  });
 
   after(() => Promise.all([
     db.collection('accessTokens')
@@ -694,6 +698,7 @@ describe('/users router', () => {
     });
 
     it('should reject Facebook ID update when missing Facebook verified', (done) => {
+      mochaContext.timeout(15000);
       const facebookId = fbTestUsers[1].id;
       assertRequest({
         facebookId,
@@ -708,6 +713,7 @@ describe('/users router', () => {
     });
 
     it('should reject Facebook ID if taken by another confirmed user', (done) => {
+      mochaContext.timeout(15000);
       const facebookId = fbUserFixture1.facebookId;
       assertRequest({
         facebookId,
@@ -723,6 +729,7 @@ describe('/users router', () => {
     });
 
     it('should reject Facebook ID for an unconfirmed user', (done) => {
+      mochaContext.timeout(15000);
       expect(userFixture2.isConfirmed).to.be.false;
       const facebookId = fbTestUsers[1].id;
       request(app)
@@ -742,6 +749,7 @@ describe('/users router', () => {
     });
 
     it('should accept Facebook ID for a confirmed user', (done) => {
+      mochaContext.timeout(15000);
       const facebookId = fbTestUsers[2].id;
       request(app)
         .post(`/users/${userFixture3._id}`)
@@ -762,6 +770,7 @@ describe('/users router', () => {
     });
 
     it('should accept Facebook ID and email for unconfirmed user and update user to confirm', (done) => {
+      mochaContext.timeout(15000);
       expect(userFixture4.isConfirmed).to.be.false;
       const facebookId = fbTestUsers[3].id;
       request(app)
