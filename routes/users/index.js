@@ -8,6 +8,7 @@ import updateUserSettings from './updateUserSettings';
 import getUserSessions from './getUserSessions';
 import getUserWorkouts from './getUserWorkouts';
 import resendEmail from './resendEmail';
+import getResearchVideos from './getResearchVideos';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.post('/:id', requireSelfAuth, handleRoute(updateUser));
 router.post('/settings/:id', requireSelfAuth, handleRoute(updateUserSettings));
 router.get('/workouts/:id', requireSelfAuth, handleRoute(getUserWorkouts));
 router.post('/send-confirmation-email/:id', requireSelfAuth, handleRoute(resendEmail));
+router.get('/researchVideos/:id', requireSelfAuth, handleRoute(getResearchVideos));
 
 export default router;
