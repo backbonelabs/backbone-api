@@ -44,130 +44,135 @@ const userObjectIdsToDelete = [];
 const accessTokensToDelete = [];
 const validFBAppId = process.env.FB_APP_ID;
 
-describe('/auth router', () => {
-  before(() => (
-    Promise.resolve(server)
-      .then((expressApp) => {
-        app = expressApp;
-      })
-      .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
-      .then((mDb) => {
-        db = mDb;
-      })
-      .then(() => {
-        emailUtility = EmailUtility.init({
-          apiKey: process.env.BL_MAILGUN_API,
-          domain: process.env.BL_MAILGUN_DOMAIN,
-          silentEmail: true,
-        });
-        sendConfirmationEmailStub = sinon
-          .stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
-        sendPasswordResetEmailStub = sinon
-          .stub(emailUtility, 'sendPasswordResetEmail', () => Promise.resolve());
-        sendPasswordResetSuccessEmailStub = sinon
-          .stub(emailUtility, 'sendPasswordResetSuccessEmail', () => Promise.resolve());
-      })
-      .then(() => {
-        // Retrieve Facebook test users
-        const options = {
-          method: 'GET',
-          uri: `https://graph.facebook.com/v2.10/${validFBAppId}/accounts/test-users/`,
-          qs: {
-            fields: 'access_token',
-            access_token: `${validFBAppId}|${process.env.FB_APP_SECRET}`,
-          },
-          json: true,
-        };
+describe('/auth router', function describeAuth() {
+  const mochaContext = this;
 
-        return requestPromise(options);
-      })
-      .then((body) => {
-        // At least 5 test users must exist at developers.facebook.com.
-        fbTestUsers = body.data;
-      })
-      .then(() => (
-        tokenFactory.generateToken()
-          .then(([token, tokenExpiry]) => {
-            const expiredToken = randomString({ length: 40 });
-            const expiredTokenExpiry = new Date();
-            expiredTokenExpiry.setDate(expiredTokenExpiry.getDate() - 1);
+  before(() => {
+    mochaContext.timeout(15000);
+    return (
+      Promise.resolve(server)
+        .then((expressApp) => {
+          app = expressApp;
+        })
+        .then(() => MongoClient.connect(process.env.BL_DATABASE_URL))
+        .then((mDb) => {
+          db = mDb;
+        })
+        .then(() => {
+          emailUtility = EmailUtility.init({
+            apiKey: process.env.BL_MAILGUN_API,
+            domain: process.env.BL_MAILGUN_DOMAIN,
+            silentEmail: true,
+          });
+          sendConfirmationEmailStub = sinon
+            .stub(emailUtility, 'sendConfirmationEmail', () => Promise.resolve());
+          sendPasswordResetEmailStub = sinon
+            .stub(emailUtility, 'sendPasswordResetEmail', () => Promise.resolve());
+          sendPasswordResetSuccessEmailStub = sinon
+            .stub(emailUtility, 'sendPasswordResetSuccessEmail', () => Promise.resolve());
+        })
+        .then(() => {
+          // Retrieve Facebook test users
+          const options = {
+            method: 'GET',
+            uri: `https://graph.facebook.com/v2.10/${validFBAppId}/accounts/test-users/`,
+            qs: {
+              fields: 'access_token',
+              access_token: `${validFBAppId}|${process.env.FB_APP_SECRET}`,
+            },
+            json: true,
+          };
 
-            return db.collection('users')
-              .insertMany([{
-                email: testEmail1,
-                password: testPasswordHash,
-                isConfirmed: false,
-                authMethod: constants.authMethods.EMAIL,
-              }, {
-                email: testEmail2,
-                password: testPasswordHash,
-                authMethod: constants.authMethods.EMAIL,
-                isConfirmed: true,
-              }, {
-                email: testEmail3,
-                password: testPasswordHash,
-                authMethod: constants.authMethods.EMAIL,
-                isConfirmed: false,
-                passwordResetToken: token,
-                passwordResetTokenExpiry: tokenExpiry,
-                confirmationToken: token,
-                confirmationTokenExpiry: tokenExpiry,
-              }, {
-                email: testEmail4,
-                password: testPasswordHash,
-                authMethod: constants.authMethods.EMAIL,
-                isConfirmed: false,
-                passwordResetToken: expiredToken,
-                passwordResetTokenExpiry: expiredTokenExpiry,
-                confirmationToken: expiredToken,
-                confirmationTokenExpiry: expiredTokenExpiry,
-              }, {
-                email: testEmail5,
-                isConfirmed: true,
-                authMethod: constants.authMethods.EMAIL,
-              }, {
-                email: testEmail6,
-                isConfirmed: true,
-                authMethod: constants.authMethods.FACEBOOK,
-                facebookId: fbTestUsers[0].id,
-              }, {
-                email: testEmail7,
-                isConfirmed: true,
-                authMethod: constants.authMethods.EMAIL,
-                facebookId: fbTestUsers[1].id,
-              }, {
-                email: testEmail8,
-                isConfirmed: false,
-                authMethod: constants.authMethods.EMAIL,
-                facebookId: fbTestUsers[2].id,
-              }]);
-          })
-      ))
-      .then((results) => {
-        const { ops } = results;
-        emailUnconfirmedUserFixture = ops[0];
-        emailConfirmedUserFixture1 = ops[1];
-        validTokenUserFixture = ops[2];
-        invalidTokenUserFixture = ops[3];
-        emailConfirmedUserFixture2 = ops[4];
-        fbUserFixture = ops[5];
-        emailConfirmedWithFbUserFixture = ops[6];
-        unconfirmedWithFbUserFixture = ops[7];
+          return requestPromise(options);
+        })
+        .then((body) => {
+          // At least 5 test users must exist at developers.facebook.com.
+          fbTestUsers = body.data;
+        })
+        .then(() => (
+          tokenFactory.generateToken()
+            .then(([token, tokenExpiry]) => {
+              const expiredToken = randomString({ length: 40 });
+              const expiredTokenExpiry = new Date();
+              expiredTokenExpiry.setDate(expiredTokenExpiry.getDate() - 1);
 
-        ops.forEach(doc => userObjectIdsToDelete.push(doc._id));
-      })
-      .then(() => db.collection('accessTokens')
-        .insertOne({
-          userId: emailConfirmedUserFixture1._id,
-          accessToken: randomString({ length: 64 }),
-        }),
-      )
-      .then((results) => {
-        accessTokenFixture = results.ops[0];
-        accessTokenFixture.userId = accessTokenFixture.userId.toHexString();
-        accessTokensToDelete.push(accessTokenFixture.accessToken);
-      })
-  ));
+              return db.collection('users')
+                .insertMany([{
+                  email: testEmail1,
+                  password: testPasswordHash,
+                  isConfirmed: false,
+                  authMethod: constants.authMethods.EMAIL,
+                }, {
+                  email: testEmail2,
+                  password: testPasswordHash,
+                  authMethod: constants.authMethods.EMAIL,
+                  isConfirmed: true,
+                }, {
+                  email: testEmail3,
+                  password: testPasswordHash,
+                  authMethod: constants.authMethods.EMAIL,
+                  isConfirmed: false,
+                  passwordResetToken: token,
+                  passwordResetTokenExpiry: tokenExpiry,
+                  confirmationToken: token,
+                  confirmationTokenExpiry: tokenExpiry,
+                }, {
+                  email: testEmail4,
+                  password: testPasswordHash,
+                  authMethod: constants.authMethods.EMAIL,
+                  isConfirmed: false,
+                  passwordResetToken: expiredToken,
+                  passwordResetTokenExpiry: expiredTokenExpiry,
+                  confirmationToken: expiredToken,
+                  confirmationTokenExpiry: expiredTokenExpiry,
+                }, {
+                  email: testEmail5,
+                  isConfirmed: true,
+                  authMethod: constants.authMethods.EMAIL,
+                }, {
+                  email: testEmail6,
+                  isConfirmed: true,
+                  authMethod: constants.authMethods.FACEBOOK,
+                  facebookId: fbTestUsers[0].id,
+                }, {
+                  email: testEmail7,
+                  isConfirmed: true,
+                  authMethod: constants.authMethods.EMAIL,
+                  facebookId: fbTestUsers[1].id,
+                }, {
+                  email: testEmail8,
+                  isConfirmed: false,
+                  authMethod: constants.authMethods.EMAIL,
+                  facebookId: fbTestUsers[2].id,
+                }]);
+            })
+        ))
+        .then((results) => {
+          const { ops } = results;
+          emailUnconfirmedUserFixture = ops[0];
+          emailConfirmedUserFixture1 = ops[1];
+          validTokenUserFixture = ops[2];
+          invalidTokenUserFixture = ops[3];
+          emailConfirmedUserFixture2 = ops[4];
+          fbUserFixture = ops[5];
+          emailConfirmedWithFbUserFixture = ops[6];
+          unconfirmedWithFbUserFixture = ops[7];
+
+          ops.forEach(doc => userObjectIdsToDelete.push(doc._id));
+        })
+        .then(() => db.collection('accessTokens')
+          .insertOne({
+            userId: emailConfirmedUserFixture1._id,
+            accessToken: randomString({ length: 64 }),
+          }),
+        )
+        .then((results) => {
+          accessTokenFixture = results.ops[0];
+          accessTokenFixture.userId = accessTokenFixture.userId.toHexString();
+          accessTokensToDelete.push(accessTokenFixture.accessToken);
+        })
+    );
+  });
 
   beforeEach(() => {
     sendConfirmationEmailStub.reset();
@@ -259,6 +264,9 @@ describe('/auth router', () => {
   });
 
   describe('POST /facebook', () => {
+    // For Facebook tests, increase timeout because Facebook Graph API can sometimes
+    // take a while to respond
+    mochaContext.timeout(15000);
     const url = '/auth/facebook';
     const assertRequestStatusCode = (statusCode, body) => new Promise((resolve, reject) => {
       request(app)
