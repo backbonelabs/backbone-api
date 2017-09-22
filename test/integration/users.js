@@ -994,4 +994,18 @@ describe('/users router', function describeUsers() {
         .end(done);
     });
   });
+
+  describe('GET /research-videos/:id', () => {
+    const url = '/users/research-videos';
+    it('should return an array of research videos', (done) => {
+      request(app)
+        .get(`${url}/${userFixture1._id}`)
+        .set('Authorization', `Bearer ${testAccessToken1}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).to.be.instanceOf(Array);
+        })
+        .end(done);
+    });
+  });
 });
